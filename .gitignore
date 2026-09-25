@@ -19,6 +19,8 @@ yarn-error.log
 *.launch
 .settings/
 *.sublime-workspace
+.obsidian
+*.canvas
 
 # Visual Studio Code
 .vscode/*
@@ -38,6 +40,9 @@ yarn-error.log
 testem.log
 /typings
 __screenshots__/
+*.md
+!README.md
+*.py
 
 # System files
 .DS_Store

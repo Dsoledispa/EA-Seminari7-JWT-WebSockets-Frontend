@@ -1,0 +1,78 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+
+import { Book } from '../models';
+import { BookService } from './book.service';
+
+describe('BookService', () => {
+  let service: BookService;
+  let httpMock: HttpTestingController;
+
+  const book: Book = {
+    _id: 'b1',
+    title: 'Clean Code',
+    isbn: '9780132350884',
+    authors: [
+      { _id: 'a1', name: 'Robert C. Martin', email: 'uncle@example.com', nationality: 'American' },
+    ],
+    price: 29.99,
+    tags: ['software'],
+    language: 'en',
+  };
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(BookService);
+    httpMock = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('getBooks() returns the raw { books } response', () => {
+    let response: Book[] | undefined;
+    service.getBooks().subscribe((res) => (response = res.books));
+
+    const req = httpMock.expectOne('http://localhost:1337/books');
+    expect(req.request.method).toBe('GET');
+    req.flush({ books: [book] });
+
+    expect(response).toEqual([book]);
+  });
+
+  it('getBook() returns the raw { book } response', () => {
+    let response: Book | undefined;
+    service.getBook('b1').subscribe((res) => (response = res.book));
+    httpMock.expectOne('http://localhost:1337/books/b1').flush({ book });
+req.request.method).toBe('POST');
+    expect(req.request.body.authors).toEqual(['a1']);
+    req.flush({ book });
+  });
+
+  it('updateBook() puts the payload to the id url', () => {
+    service.updateBook('b1', { price: 19.99 }).subscribe();
+    const req = httpMock.expectOne('http://localhost:1337/books/b1');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body.price).toBe(19.99);
+    req.flush({ book: { ...book, price: 19.99 } });
+  });
+
+  it('deleteBook() sends a DELETE to the id url', () => {
+    service.deleteBook('b1').subscribe();
+    const req = httpMock.expectOne('http://localhost:1337/books/b1');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
+
+  it('propagates the server error to the subscriber', () => {
+    let failed = false;
+    service.getBooks().subscribe({ error: () => (failed = true) });
+    httpMock
+      .expectOne('http://localhost:1337/books')
+      .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+
+    expect(failed).toBe(true);
+  });
+});
