@@ -486,5 +486,5 @@ pestaña más de F12:
 En VS Code, además, la configuración "ng serve" de `.vscode/launch.json` abre Chrome con el depurador
 enganchado, y así se pueden poner breakpoints en los `.ts` (F5).
 
-Los tests se pasan con `npm test -- --watch=false` (Vitest): comprueban los servicios, la paginación, el
-pipe y las dos funciones de `utils`.
+Los tests se pasan con `npm test -- --watch=false` (Vitest): comprueban los servicios, el pipe y que
+la app arranca con su menú.
