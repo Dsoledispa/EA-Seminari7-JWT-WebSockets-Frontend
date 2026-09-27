@@ -1,0 +1,75 @@
+<div class="page-header">
+  <h1>Libros</h1>
+</div>
+
+<input
+  class="search"
+  type="search"
+  placeholder="Buscar por título o ISBN"
+  [(ngModel)]="search"
+  (ngModelChange)="page.set(1)"
+/>
+
+@if (error()) {
+  <p class="alert">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="muted">Cargando...</p>
+} @else if (!error() || books().length > 0) {
+  <table>
+    <thead>
+      <tr>
+        <th>Título</th>
+        <th>Autores</th>
+        <th>Idioma</th>
+        <th>Año</th>
+        <th>Precio</th>
+        <th>Tags</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (book of pageBooks(); track book._id) {
+        <tr>
+          <td>{{ book.title }}</td>
+          <td>
+            <!-- Si se borra el único autor de un libro, la API lo devuelve sin autores -->
+            @for (author of book.authors; track author._id; let last = $last) {
+              {{ author.name }}{{ last ? '' : ', ' }}
+            } @empty {
+              <span class="muted">Sin autores</span>
+            }
+          </td>
+          <td>{{ book.language | languageName }}</td>
+          <td>{{ book.publishedYear }}</td>
+          <td>{{ book.price | currency: 'EUR' }}</td>
+          <td>
+            @for (tag of book.tags; track tag) {
+              <span class="tag">{{ tag }}</span>
+            }
+          </td>
+          <td class="actions">
+            <button type="button" class="danger" (click)="deleteBook(book)">Borrar</button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td class="empty" colspan="7">
+            @if (search()) {
+              No hay resultados para «{{ search() }}»
+            } @else {
+              No hay libros
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <app-pagination
+    [page]="currentPage()"
+    [totalPages]="totalPages()"
+    (pageChange)="page.set($event)"
+  />
+}
