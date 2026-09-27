@@ -16,4 +16,12 @@ describe('App', () => {
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
   });
+
+  it('should render the navigation bar', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const links = Array.from(compiled.querySelectorAll('nav a')).map((a) => a.textContent?.trim());
+    expect(links).toEqual(['Autores']);
+  });
 });
