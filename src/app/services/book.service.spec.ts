@@ -17,7 +17,7 @@ describe('BookService', () => {
       { _id: 'a1', name: 'Robert C. Martin', email: 'uncle@example.com', nationality: 'American' },
     ],
     price: 29.99,
-    tags: ['software'],
+    tags: ['ensayo'],
     language: 'en',
   };
 
@@ -46,7 +46,14 @@ describe('BookService', () => {
     let response: Book | undefined;
     service.getBook('b1').subscribe((res) => (response = res.book));
     httpMock.expectOne('http://localhost:1337/books/b1').flush({ book });
-req.request.method).toBe('POST');
+
+    expect(response).toEqual(book);
+  });
+
+  it('createBook() posts the payload', () => {
+    service.createBook({ title: 'Clean Code', isbn: '9780132350884', authors: ['a1'] }).subscribe();
+    const req = httpMock.expectOne('http://localhost:1337/books');
+    expect(req.request.method).toBe('POST');
     expect(req.request.body.authors).toEqual(['a1']);
     req.flush({ book });
   });
