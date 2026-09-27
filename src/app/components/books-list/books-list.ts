@@ -2,6 +2,7 @@ import { CurrencyPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { Book } from '../../models';
 import { LanguageNamePipe } from '../../pipes/language-name-pipe';
@@ -14,7 +15,7 @@ const PAGE_SIZE = 4;
 
 @Component({
   selector: 'app-books-list',
-  imports: [FormsModule, CurrencyPipe, LanguageNamePipe, Pagination],
+  imports: [FormsModule, RouterLink, CurrencyPipe, LanguageNamePipe, Pagination],
   templateUrl: './books-list.html',
   styleUrl: './books-list.css',
 })
