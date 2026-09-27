@@ -9,7 +9,6 @@ export const routes: Routes = [
   { path: '', redirectTo: 'authors', pathMatch: 'full' },
   { path: 'authors', component: AuthorsList, title: 'Autores' },
   { path: 'authors/new', component: AuthorForm, title: 'Nuevo autor' },
-  // El mismo formulario sirve para editar: el :id le llega como input
   { path: 'authors/:id/edit', component: AuthorForm, title: 'Editar autor' },
   { path: 'books', component: BooksList, title: 'Libros' },
   { path: 'books/new', component: BookForm, title: 'Nuevo libro' },

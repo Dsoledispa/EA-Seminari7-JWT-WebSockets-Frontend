@@ -6,6 +6,8 @@
 
 @if (loading()) {
   <p class="muted">Cargando...</p>
+} @else if (loadFailed()) {
+  <a routerLink="/authors">Volver a la lista de autores</a>
 } @else {
   <form [formGroup]="form" (ngSubmit)="save()">
     <label>
@@ -71,7 +73,7 @@
     </label>
 
     <div class="form-actions">
-      <!-- Property binding: el botón se desactiva mientras el formulario no sea válido -->
+      <!-- Property binding: el botón se desactiva si el formulario no es válido o se está guardando -->
       <button type="submit" [disabled]="form.invalid || saving()">
         {{ saving() ? 'Guardando...' : 'Guardar' }}
       </button>

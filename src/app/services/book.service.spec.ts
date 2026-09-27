@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 
 import { Book } from '../models';
+import { environment } from '../../environments/environment';
 import { BookService } from './book.service';
 
 describe('BookService', () => {
@@ -35,7 +36,7 @@ describe('BookService', () => {
     let response: Book[] | undefined;
     service.getBooks().subscribe((res) => (response = res.books));
 
-    const req = httpMock.expectOne('http://localhost:1337/books');
+    const req = httpMock.expectOne(`${environment.apiUrl}/books`);
     expect(req.request.method).toBe('GET');
     req.flush({ books: [book] });
 
@@ -45,14 +46,14 @@ describe('BookService', () => {
   it('getBook() returns the raw { book } response', () => {
     let response: Book | undefined;
     service.getBook('b1').subscribe((res) => (response = res.book));
-    httpMock.expectOne('http://localhost:1337/books/b1').flush({ book });
+    httpMock.expectOne(`${environment.apiUrl}/books/b1`).flush({ book });
 
     expect(response).toEqual(book);
   });
 
   it('createBook() posts the payload', () => {
     service.createBook({ title: 'Clean Code', isbn: '9780132350884', authors: ['a1'] }).subscribe();
-    const req = httpMock.expectOne('http://localhost:1337/books');
+    const req = httpMock.expectOne(`${environment.apiUrl}/books`);
     expect(req.request.method).toBe('POST');
     expect(req.request.body.authors).toEqual(['a1']);
     req.flush({ book });
@@ -60,7 +61,7 @@ describe('BookService', () => {
 
   it('updateBook() puts the payload to the id url', () => {
     service.updateBook('b1', { price: 19.99 }).subscribe();
-    const req = httpMock.expectOne('http://localhost:1337/books/b1');
+    const req = httpMock.expectOne(`${environment.apiUrl}/books/b1`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body.price).toBe(19.99);
     req.flush({ book: { ...book, price: 19.99 } });
@@ -68,7 +69,7 @@ describe('BookService', () => {
 
   it('deleteBook() sends a DELETE to the id url', () => {
     service.deleteBook('b1').subscribe();
-    const req = httpMock.expectOne('http://localhost:1337/books/b1');
+    const req = httpMock.expectOne(`${environment.apiUrl}/books/b1`);
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
@@ -77,7 +78,7 @@ describe('BookService', () => {
     let failed = false;
     service.getBooks().subscribe({ error: () => (failed = true) });
     httpMock
-      .expectOne('http://localhost:1337/books')
+      .expectOne(`${environment.apiUrl}/books`)
       .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
 
     expect(failed).toBe(true);

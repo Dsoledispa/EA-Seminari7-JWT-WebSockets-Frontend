@@ -31,6 +31,7 @@ export class BookForm implements OnInit {
   readonly tags = BOOK_TAGS;
 
   loading = signal(false);
+  loadFailed = signal(false);
   saving = signal(false);
   error = signal('');
 
@@ -68,6 +69,7 @@ export class BookForm implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.error.set(apiErrorMessage(err));
+        this.loadFailed.set(true);
         this.loading.set(false);
       },
     });
@@ -86,7 +88,7 @@ export class BookForm implements OnInit {
     this.saving.set(true);
     this.error.set('');
     request.subscribe({
-      next: () => this.router.navigate(['/books']),
+      next: () => this.router.navigate(['/books'], { replaceUrl: true }),
       error: (err: HttpErrorResponse) => {
         this.error.set(apiErrorMessage(err));
         this.saving.set(false);

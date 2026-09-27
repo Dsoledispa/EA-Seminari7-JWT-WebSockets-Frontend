@@ -19,11 +19,11 @@ export class AuthorForm implements OnInit {
   private authorService = inject(AuthorService);
   private router = inject(Router);
 
-  // El :id de la ruta authors/:id/edit llega aquí gracias a withComponentInputBinding().
-  // En authors/new no hay id, así que el formulario sirve para crear
+  // Viene del :id de la ruta. En authors/new no hay id y el formulario sirve para crear
   id = input<string>();
 
   loading = signal(false);
+  loadFailed = signal(false);
   saving = signal(false);
   error = signal('');
 
@@ -52,7 +52,7 @@ export class AuthorForm implements OnInit {
       return;
     }
 
-    // Si he recargado la página ya no hay state, así que se lo pido a la API
+    // Si entro escribiendo la URL o desde otra pestaña no hay state, así que se lo pido a la API
     this.loading.set(true);
     this.authorService.getAuthor(id).subscribe({
       next: (response) => {
@@ -61,6 +61,7 @@ export class AuthorForm implements OnInit {
       },
       error: (err: HttpErrorResponse) => {
         this.error.set(apiErrorMessage(err));
+        this.loadFailed.set(true);
         this.loading.set(false);
       },
     });
@@ -81,7 +82,8 @@ export class AuthorForm implements OnInit {
     this.saving.set(true);
     this.error.set('');
     request.subscribe({
-      next: () => this.router.navigate(['/authors']),
+      // replaceUrl: así el botón Atrás no vuelve a este formulario con los datos de antes de guardar
+      next: () => this.router.navigate(['/authors'], { replaceUrl: true }),
       error: (err: HttpErrorResponse) => {
         this.error.set(apiErrorMessage(err));
         this.saving.set(false);

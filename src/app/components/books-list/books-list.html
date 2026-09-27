@@ -7,6 +7,7 @@
   class="search"
   type="search"
   placeholder="Buscar por título o ISBN"
+  aria-label="Buscar libros"
   [(ngModel)]="search"
   (ngModelChange)="page.set(1)"
 />
@@ -62,7 +63,7 @@
         <tr>
           <td class="empty" colspan="7">
             @if (search()) {
-              No hay resultados para «{{ search() }}»
+              No hay resultados para "{{ search() }}"
             } @else {
               No hay libros
             }

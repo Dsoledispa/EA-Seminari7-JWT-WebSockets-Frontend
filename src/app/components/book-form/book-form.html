@@ -6,6 +6,8 @@
 
 @if (loading()) {
   <p class="muted">Cargando...</p>
+} @else if (loadFailed()) {
+  <a routerLink="/books">Volver a la lista de libros</a>
 } @else {
   <form [formGroup]="form" (ngSubmit)="save()">
     <label>
@@ -40,7 +42,7 @@
     <label>
       Año de publicación
       <input type="number" formControlName="publishedYear" />
-      @if (form.controls.publishedYear.invalid) {
+      @if (form.controls.publishedYear.touched && form.controls.publishedYear.invalid) {
         <small class="field-error">Tiene que estar entre 1450 y 2100</small>
       }
     </label>
@@ -48,7 +50,7 @@
     <label>
       Páginas
       <input type="number" formControlName="pages" min="1" />
-      @if (form.controls.pages.invalid) {
+      @if (form.controls.pages.touched && form.controls.pages.invalid) {
         <small class="field-error">Tiene que tener 1 página como mínimo</small>
       }
     </label>
@@ -75,7 +77,7 @@
     <label>
       Precio (€)
       <input type="number" formControlName="price" min="0" step="0.01" />
-      @if (form.controls.price.invalid) {
+      @if (form.controls.price.touched && form.controls.price.invalid) {
         <small class="field-error">No puede ser negativo</small>
       }
     </label>
