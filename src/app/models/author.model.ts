@@ -4,7 +4,7 @@ export interface Author {
   _id: string;
   name: string;
   email: string;
-  nationality: string;
+  nationality?: string;
   biography?: string;
   birthDate?: string;
   website?: string;

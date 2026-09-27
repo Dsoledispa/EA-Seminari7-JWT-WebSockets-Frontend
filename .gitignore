@@ -42,6 +42,7 @@ testem.log
 __screenshots__/
 *.md
 !README.md
+!GUIA.md
 *.py
 
 # System files
