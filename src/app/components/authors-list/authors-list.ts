@@ -2,6 +2,7 @@ import { DatePipe, NgStyle, UpperCasePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 
 import { Author } from '../../models';
 import { AuthorService } from '../../services/author.service';
@@ -13,12 +14,13 @@ const PAGE_SIZE = 4;
 
 @Component({
   selector: 'app-authors-list',
-  imports: [FormsModule, DatePipe, UpperCasePipe, NgStyle, Pagination],
+  imports: [FormsModule, RouterLink, DatePipe, UpperCasePipe, NgStyle, Pagination],
   templateUrl: './authors-list.html',
   styleUrl: './authors-list.css',
 })
 export class AuthorsList implements OnInit {
   private authorService = inject(AuthorService);
+  private router = inject(Router);
 
   // Antes: authors: Author[] = [];
   authors = signal<Author[]>([]);
@@ -59,6 +61,12 @@ export class AuthorsList implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  edit(author: Author): void {
+    // Además del :id en la URL, le paso el autor entero en el state de la navegación.
+    // Así el formulario no tiene que volver a pedirlo a la API
+    this.router.navigate(['/authors', author._id, 'edit'], { state: { author } });
   }
 
   deleteAuthor(author: Author): void {

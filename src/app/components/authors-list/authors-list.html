@@ -1,5 +1,6 @@
 <div class="page-header">
   <h1>Autores</h1>
+  <a class="button" routerLink="/authors/new">Nuevo autor</a>
 </div>
 
 <!-- Two-way binding: lo que escribo va a la signal search y al revés -->
@@ -49,6 +50,7 @@
           </td>
           <td>{{ author.active ? 'Sí' : 'No' }}</td>
           <td class="actions">
+            <button type="button" class="secondary" (click)="edit(author)">Editar</button>
             <button type="button" class="danger" (click)="deleteAuthor(author)">Borrar</button>
           </td>
         </tr>
