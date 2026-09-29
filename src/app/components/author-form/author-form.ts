@@ -90,7 +90,7 @@ export class AuthorForm implements OnInit {
 
     const id = this.id();
     const { confirmPassword, ...formData } = this.form.getRawValue();
-const author = removeEmpty(formData) as CreateAuthor;
+    const author = removeEmpty(formData) as CreateAuthor;
     const request = id
       ? this.authorService.updateAuthor(id, author)
       : this.authorService.createAuthor(author);
