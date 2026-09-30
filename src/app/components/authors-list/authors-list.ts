@@ -7,6 +7,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Author } from '../../models';
 import { AuthorService } from '../../services/author.service';
 import { apiErrorMessage } from '../../utils/api-error';
+import { AuthorCard } from '../author-card/author-card';
 import { Pagination } from '../pagination/pagination';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { ViewMode, ViewToggle, savedViewMode } from '../view-toggle/view-toggle';
@@ -16,7 +17,7 @@ const PAGE_SIZE = 4;
 
 @Component({
   selector: 'app-authors-list',
-  imports: [FormsModule, RouterLink, DatePipe, UpperCasePipe, NgStyle, Pagination, ConfirmModal, ViewToggle],
+  imports: [FormsModule, RouterLink, DatePipe, UpperCasePipe, NgStyle, AuthorCard, Pagination, ConfirmModal, ViewToggle],
   templateUrl: './authors-list.html',
   styleUrl: './authors-list.css',
 })
@@ -76,14 +77,6 @@ export class AuthorsList implements OnInit {
         this.loading.set(false);
       },
     });
-  }
-
-  // Iniciales para el círculo de la tarjeta: primera y última palabra ("Miguel de Cervantes" -> "MC")
-  initials(name: string): string {
-    const words = name.split(' ').filter((word) => word);
-    const first = words[0] ?? '';
-    const last = words.length > 1 ? words[words.length - 1] : '';
-    return (first.charAt(0) + last.charAt(0)).toUpperCase();
   }
 
   edit(author: Author): void {
