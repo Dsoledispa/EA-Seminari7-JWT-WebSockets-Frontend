@@ -10,13 +10,14 @@ import { TruncatePipe } from '../../pipes/truncate-pipe';
 import { BookService } from '../../services/book.service';
 import { apiErrorMessage } from '../../utils/api-error';
 import { Pagination } from '../pagination/pagination';
+import { ConfirmModal } from '../confirm-modal/confirm-modal';
 
 // Libros que se ven en cada página de la tabla
 const PAGE_SIZE = 4;
 
 @Component({
   selector: 'app-books-list',
-  imports: [FormsModule, RouterLink, CurrencyPipe, LanguageNamePipe, TruncatePipe, Pagination],
+  imports: [FormsModule, RouterLink, CurrencyPipe, LanguageNamePipe, TruncatePipe, Pagination, ConfirmModal],
   templateUrl: './books-list.html',
   styleUrl: './books-list.css',
 })
@@ -30,6 +31,18 @@ export class BooksList implements OnInit {
   search = signal('');
   page = signal(1);
 
+  bookToDelete = signal<Book | null>(null);
+  
+  deleteBook(book: Book): void {
+  this.bookToDelete.set(book);
+}
+
+  deleteMessage = computed(() => {
+    const book = this.bookToDelete();
+    return book
+      ? `¿Borrar el libro "${book.title}"?`
+      : '';
+  });
   // Me quedo con los libros cuyo título o ISBN contiene lo que se ha escrito
   filteredBooks = computed(() => {
     const text = this.search().trim().toLowerCase();
@@ -63,15 +76,24 @@ export class BooksList implements OnInit {
     });
   }
 
-  deleteBook(book: Book): void {
-    if (!confirm(`¿Borrar el libro "${book.title}"?`)) {
+  confirmDelete(): void {
+    const book = this.bookToDelete();
+    if (!book) {
       return;
     }
 
     this.error.set('');
     this.bookService.deleteBook(book._id).subscribe({
-      next: () => this.books.update((books) => books.filter((b) => b._id !== book._id)),
+      // La API responde 204 sin datos, así que lo quito yo de la lista
+      next: () => {
+      this.books.update((books) => books.filter((b) => b._id !== book._id));
+      this.bookToDelete.set(null);
+    },
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),
     });
+  }
+
+  cancelDelete(): void {
+    this.bookToDelete.set(null);
   }
 }
