@@ -8,13 +8,14 @@ import { Author } from '../../models';
 import { AuthorService } from '../../services/author.service';
 import { apiErrorMessage } from '../../utils/api-error';
 import { Pagination } from '../pagination/pagination';
+import { ConfirmModal } from '../confirm-modal/confirm-modal';
 
 // Autores que se ven en cada página de la tabla
 const PAGE_SIZE = 4;
 
 @Component({
   selector: 'app-authors-list',
-  imports: [FormsModule, RouterLink, DatePipe, UpperCasePipe, NgStyle, Pagination],
+  imports: [FormsModule, RouterLink, DatePipe, UpperCasePipe, NgStyle, Pagination, ConfirmModal],
   templateUrl: './authors-list.html',
   styleUrl: './authors-list.css',
 })
@@ -30,6 +31,15 @@ export class AuthorsList implements OnInit {
   // Texto del buscador (va con [(ngModel)]) y página en la que estoy
   search = signal('');
   page = signal(1);
+
+  authorToDelete = signal<Author | null>(null);
+
+  deleteMessage = computed(() => {
+    const author = this.authorToDelete();
+    return author
+      ? `¿Borrar a ${author.name}? Sus libros no se borran, pero dejarán de tenerlo como autor.`
+      : '';
+  });
 
   // Me quedo con los autores cuyo nombre o email contiene lo que se ha escrito
   filteredAuthors = computed(() => {
@@ -69,17 +79,28 @@ export class AuthorsList implements OnInit {
     this.router.navigate(['/authors', author._id, 'edit'], { state: { author } });
   }
 
-  deleteAuthor(author: Author): void {
-    const question = `¿Borrar a ${author.name}? Sus libros no se borran, pero dejarán de tenerlo como autor.`;
-    if (!confirm(question)) {
+    deleteAuthor(author: Author): void {
+    this.authorToDelete.set(author);
+  }
+
+  confirmDelete(): void {
+    const author = this.authorToDelete();
+    if (!author) {
       return;
     }
 
     this.error.set('');
     this.authorService.deleteAuthor(author._id).subscribe({
       // La API responde 204 sin datos, así que lo quito yo de la lista
-      next: () => this.authors.update((authors) => authors.filter((a) => a._id !== author._id)),
+       next: () => {
+      this.authors.update((authors) => authors.filter((a) => a._id !== author._id));
+      this.authorToDelete.set(null);
+    },
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),
     });
+  }
+
+  cancelDelete(): void {
+    this.authorToDelete.set(null);
   }
 }

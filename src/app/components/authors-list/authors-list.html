@@ -74,4 +74,13 @@
     [totalPages]="totalPages()"
     (pageChange)="page.set($event)"
   />
+
+  <app-confirm-modal
+  [open]="!!authorToDelete()"
+  title="Confirmar borrado"
+  [message]="deleteMessage()"
+  confirmText="Borrar"
+  (confirmed)="confirmDelete()"
+  (cancelled)="cancelDelete()"
+/>
 }
