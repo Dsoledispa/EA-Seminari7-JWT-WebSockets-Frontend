@@ -76,38 +76,7 @@
     <!-- Los mismos autores de la página, pero en tarjetas -->
     <div class="cards">
       @for (author of pageAuthors(); track author._id) {
-        <article class="card" [class.inactive]="!author.active">
-          <div class="card-body">
-            <div class="author-head">
-              <span class="avatar">{{ initials(author.name) }}</span>
-              <div>
-                <h3>{{ author.name }}</h3>
-                <span class="muted">{{ author.email }}</span>
-              </div>
-            </div>
-            <span>
-              {{ author.nationality || 'Sin nacionalidad' }}
-              @if (author.birthDate) {
-                · {{ author.birthDate.slice(0, 10) | date: 'dd/MM/yyyy' }}
-              }
-            </span>
-            <div>
-              <span
-                class="role"
-                [ngStyle]="{ 'background-color': author.role === 'admin' ? '#fde2e1' : '#e3e8fb' }"
-              >
-                {{ author.role | uppercase }}
-              </span>
-              @if (!author.active) {
-                <span class="muted"> · Inactivo</span>
-              }
-            </div>
-          </div>
-          <div class="card-actions">
-            <button type="button" class="secondary" (click)="edit(author)">Editar</button>
-            <button type="button" class="danger" (click)="deleteAuthor(author)">Borrar</button>
-          </div>
-        </article>
+        <app-author-card [author]="author" (edit)="edit($event)" (delete)="deleteAuthor($event)" />
       } @empty {
         <p class="muted cards-empty">
           @if (search()) {
