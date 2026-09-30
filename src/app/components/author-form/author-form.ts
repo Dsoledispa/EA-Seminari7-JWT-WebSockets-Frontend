@@ -7,6 +7,18 @@ import { Author, AuthorRole, CreateAuthor } from '../../models';
 import { AuthorService } from '../../services/author.service';
 import { apiErrorMessage } from '../../utils/api-error';
 import { removeEmpty } from '../../utils/remove-empty';
+import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+
+const passwordMatchValidator: ValidatorFn = (
+  control: AbstractControl
+): ValidationErrors | null => {
+  const password = control.get('password')?.value;
+  const confirmPassword = control.get('confirmPassword')?.value;
+
+  return password === confirmPassword
+    ? null
+    : { passwordMismatch: true };
+};
 
 @Component({
   selector: 'app-author-form',
@@ -32,11 +44,14 @@ export class AuthorForm implements OnInit {
     name: ['', [Validators.required, Validators.pattern(/\S/)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(8)]],
+    confirmPassword: ['', Validators.required],
     birthDate: [''],
     nationality: [''],
     website: ['', Validators.pattern(/^https?:\/\/\S+$/)],
     active: [true],
     role: ['author' as AuthorRole],
+    }, {
+  validators: passwordMatchValidator
   });
 
   ngOnInit(): void {
@@ -74,7 +89,8 @@ export class AuthorForm implements OnInit {
     }
 
     const id = this.id();
-    const author = removeEmpty(this.form.getRawValue()) as CreateAuthor;
+    const { confirmPassword, ...formData } = this.form.getRawValue();
+    const author = removeEmpty(formData) as CreateAuthor;
     const request = id
       ? this.authorService.updateAuthor(id, author)
       : this.authorService.createAuthor(author);

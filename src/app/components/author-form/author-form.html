@@ -42,6 +42,17 @@
     </label>
 
     <label>
+  Repetir contraseña *
+  <input type="password" formControlName="confirmPassword" autocomplete="new-password" />
+
+  @if (form.controls.confirmPassword.touched && form.controls.confirmPassword.hasError('required')) {
+    <small class="field-error">Tienes que repetir la contraseña</small>
+  } @else if (form.controls.confirmPassword.touched && form.hasError('passwordMismatch')) {
+    <small class="field-error">Las contraseñas no coinciden</small>
+  }
+</label>
+
+    <label>
       Fecha de nacimiento
       <input type="date" formControlName="birthDate" />
     </label>
