@@ -1,9 +1,8 @@
 # BackOWIAffice — Autores y libros
 
 Backoffice hecho con Angular 21 (TypeScript, RxJS y Vitest para los tests) para el Seminario 6 de EA.
-Es el frontend de la API REST del Seminario 5
-([EA-Seminari5-APIambExpress](https://github.com/Martatm18/EA-Seminari5-APIambExpress)): desde aquí se
-pueden listar, buscar, crear, editar y borrar autores y libros.
+Es el frontend de la API REST del Seminario 5 con alguna pequeña modificación
+([EA-Seminari6-Angular-Backoffice-API](https://github.com/ruben-esc/EA-Seminari6-Angular-BackOffice-API)): desde aquí se pueden listar, buscar, crear, editar y borrar autores y libros.
 
 La explicación de cómo funciona por dentro (componentes, servicios, signals, routing, formularios...)
 está en [GUIA.md](GUIA.md).
@@ -24,8 +23,8 @@ Hacen falta dos terminales: una para la API y otra para Angular.
 Con MongoDB ya arrancado (o con la URL de Atlas puesta en el `.env`):
 
 ```
-git clone https://github.com/Martatm18/EA-Seminari5-APIambExpress
-cd EA-Seminari5-APIambExpress
+git clone https://github.com/ruben-esc/EA-Seminari6-Angular-BackOffice-API.git
+cd EA-Seminari6-Angular-BackOffice-API
 npm install
 cp .env.example .env
 npm run seed
