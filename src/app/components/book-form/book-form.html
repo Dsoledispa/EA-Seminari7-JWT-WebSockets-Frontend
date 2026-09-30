@@ -40,6 +40,15 @@
     </label>
 
     <label>
+      Descripción
+      <textarea
+        formControlName="description"
+        rows="4"
+        placeholder="Escribe una breve sinopsis o descripción del libro..."
+      ></textarea>
+    </label>
+
+    <label>
       Año de publicación
       <input type="number" formControlName="publishedYear" />
       @if (form.controls.publishedYear.touched && form.controls.publishedYear.invalid) {

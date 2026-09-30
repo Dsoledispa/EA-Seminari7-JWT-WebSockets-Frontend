@@ -17,6 +17,7 @@ export interface BookInput {
   language?: BookLanguage;
   tags?: string[];
   price?: number;
+  description?: string;
 }
 
 export interface Book extends Omit<BookInput, 'authors'> {
