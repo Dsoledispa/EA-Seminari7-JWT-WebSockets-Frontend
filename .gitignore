@@ -43,6 +43,7 @@ __screenshots__/
 *.md
 !README.md
 !GUIA.md
+!EJERCICIO.md
 *.py
 
 # System files
