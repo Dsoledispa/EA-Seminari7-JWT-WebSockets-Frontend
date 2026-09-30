@@ -122,6 +122,23 @@ La lista (padre) le pasa datos a la paginación (hijo) con `input()`, y el hijo 
 
 Es lo mismo que antes se hacía con `@Input()` y `@Output() ... = new EventEmitter()`.
 
+Si el padre y el hijo tienen que compartir un mismo valor en los dos sentidos, se usa `model()`. Es lo que
+hace el selector de lista o tarjetas (`view-toggle`): el hijo cambia el modo al pulsar un botón y el
+padre se entera solo, con la misma sintaxis `[( )]` que `ngModel`:
+
+```ts
+// view-toggle.ts
+mode = model<ViewMode>('list');
+```
+
+```html
+<!-- authors-list.html y books-list.html -->
+<app-view-toggle [(mode)]="viewMode" />
+```
+
+Cada lista guarda el modo elegido en el navegador (`localStorage`) con un `effect()`, así al volver a la
+pantalla sigue igual.
+
 Ciclo de vida: las listas y los formularios piden los datos en `ngOnInit()`, que Angular llama cuando el
 componente ya está creado y tiene sus inputs:
 

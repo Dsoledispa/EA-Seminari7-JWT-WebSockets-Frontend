@@ -1,6 +1,6 @@
 import { DatePipe, NgStyle, UpperCasePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -9,13 +9,14 @@ import { AuthorService } from '../../services/author.service';
 import { apiErrorMessage } from '../../utils/api-error';
 import { Pagination } from '../pagination/pagination';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
+import { ViewMode, ViewToggle, savedViewMode } from '../view-toggle/view-toggle';
 
 // Autores que se ven en cada página de la tabla
 const PAGE_SIZE = 4;
 
 @Component({
   selector: 'app-authors-list',
-  imports: [FormsModule, RouterLink, DatePipe, UpperCasePipe, NgStyle, Pagination, ConfirmModal],
+  imports: [FormsModule, RouterLink, DatePipe, UpperCasePipe, NgStyle, Pagination, ConfirmModal, ViewToggle],
   templateUrl: './authors-list.html',
   styleUrl: './authors-list.css',
 })
@@ -31,6 +32,10 @@ export class AuthorsList implements OnInit {
   // Texto del buscador (va con [(ngModel)]) y página en la que estoy
   search = signal('');
   page = signal(1);
+
+  // Tabla o tarjetas. Cada vez que cambia lo guardo, así al volver sigue igual
+  viewMode = signal<ViewMode>(savedViewMode('authors-view'));
+  private saveViewMode = effect(() => localStorage.setItem('authors-view', this.viewMode()));
 
   authorToDelete = signal<Author | null>(null);
 
@@ -71,6 +76,14 @@ export class AuthorsList implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  // Iniciales para el círculo de la tarjeta: primera y última palabra ("Miguel de Cervantes" -> "MC")
+  initials(name: string): string {
+    const words = name.split(' ').filter((word) => word);
+    const first = words[0] ?? '';
+    const last = words.length > 1 ? words[words.length - 1] : '';
+    return (first.charAt(0) + last.charAt(0)).toUpperCase();
   }
 
   edit(author: Author): void {

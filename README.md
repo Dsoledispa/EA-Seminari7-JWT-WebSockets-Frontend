@@ -71,10 +71,10 @@ export const environment = {
 
 | Ruta | Pantalla |
 |---|---|
-| `/authors` | Lista de autores: buscador, paginación, editar y borrar |
+| `/authors` | Lista de autores (en tabla o en tarjetas): buscador, paginación, editar y borrar |
 | `/authors/new` | Nuevo autor |
 | `/authors/:id/edit` | Editar autor |
-| `/books` | Lista de libros: buscador, paginación, editar y borrar |
+| `/books` | Lista de libros (en tabla o en tarjetas): buscador, paginación, editar y borrar |
 | `/books/new` | Nuevo libro |
 | `/books/:id/edit` | Editar libro |
 
@@ -88,7 +88,9 @@ src/app/
 │   ├── author-form/       # crear y editar autores
 │   ├── books-list/        # lista de libros
 │   ├── book-form/         # crear y editar libros
-│   └── pagination/        # paginación, componente hijo de las dos listas
+│   ├── pagination/        # paginación, componente hijo de las dos listas
+│   ├── confirm-modal/     # ventana para confirmar antes de borrar
+│   └── view-toggle/       # botones para ver las listas en tabla o en tarjetas
 ├── models/
 │   ├── author.model.ts    # Author, CreateAuthor, UpdateAuthor
 │   ├── book.model.ts      # Book, BookInput, CreateBook, UpdateBook, BOOK_LANGUAGES, BOOK_TAGS
