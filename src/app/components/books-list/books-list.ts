@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 
 import { Book } from '../../models';
 import { LanguageNamePipe } from '../../pipes/language-name-pipe';
+import { TruncatePipe } from '../../pipes/truncate-pipe';
 import { BookService } from '../../services/book.service';
 import { apiErrorMessage } from '../../utils/api-error';
 import { Pagination } from '../pagination/pagination';
@@ -15,7 +16,7 @@ const PAGE_SIZE = 4;
 
 @Component({
   selector: 'app-books-list',
-  imports: [FormsModule, RouterLink, CurrencyPipe, LanguageNamePipe, Pagination],
+  imports: [FormsModule, RouterLink, CurrencyPipe, LanguageNamePipe, TruncatePipe, Pagination],
   templateUrl: './books-list.html',
   styleUrl: './books-list.css',
 })
@@ -33,7 +34,10 @@ export class BooksList implements OnInit {
   filteredBooks = computed(() => {
     const text = this.search().trim().toLowerCase();
     return this.books().filter(
-      (book) => book.title.toLowerCase().includes(text) || book.isbn.toLowerCase().includes(text),
+      (book) => 
+        book.title.toLowerCase().includes(text) || 
+        book.isbn.toLowerCase().includes(text) ||
+        (book.description && book.description.toLowerCase().includes(text))
     );
   });
 
