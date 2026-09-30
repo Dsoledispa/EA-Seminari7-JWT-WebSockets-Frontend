@@ -1,6 +1,6 @@
 import { CurrencyPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -11,13 +11,14 @@ import { BookService } from '../../services/book.service';
 import { apiErrorMessage } from '../../utils/api-error';
 import { Pagination } from '../pagination/pagination';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
+import { ViewMode, ViewToggle, savedViewMode } from '../view-toggle/view-toggle';
 
 // Libros que se ven en cada página de la tabla
 const PAGE_SIZE = 4;
 
 @Component({
   selector: 'app-books-list',
-  imports: [FormsModule, RouterLink, CurrencyPipe, LanguageNamePipe, TruncatePipe, Pagination, ConfirmModal],
+  imports: [FormsModule, RouterLink, CurrencyPipe, LanguageNamePipe, TruncatePipe, Pagination, ConfirmModal, ViewToggle],
   templateUrl: './books-list.html',
   styleUrl: './books-list.css',
 })
@@ -30,6 +31,10 @@ export class BooksList implements OnInit {
 
   search = signal('');
   page = signal(1);
+
+  // Igual que en autores: tabla o tarjetas, y lo guardo en el navegador
+  viewMode = signal<ViewMode>(savedViewMode('books-view'));
+  private saveViewMode = effect(() => localStorage.setItem('books-view', this.viewMode()));
 
   bookToDelete = signal<Book | null>(null);
   
