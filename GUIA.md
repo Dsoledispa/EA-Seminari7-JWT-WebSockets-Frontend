@@ -417,7 +417,7 @@ El recorrido de una petición, desde que se entra en Autores hasta MongoDB y vue
 AuthorsList (ngOnInit)
   -> AuthorService.getAuthors()
     -> HttpClient: GET http://localhost:1337/authors
-      -> API del S5: router -> middleware -> controller -> service -> model
+      -> API (backend): router -> middleware -> controller -> service -> model
         -> MongoDB
       <- { authors: [...] }
   <- subscribe -> this.authors.set(...) -> la tabla se actualiza (signal)
