@@ -43,7 +43,7 @@ export class AuthorsList implements OnInit {
   deleteMessage = computed(() => {
     const author = this.authorToDelete();
     return author
-      ? `¿Borrar a ${author.name}? Sus libros no se borran, pero dejarán de tenerlo como autor.`
+      ? `¿Borrar a ${author.name}? Sus libros no se borran y seguirán mostrándolo como autor.`
       : '';
   });
 
