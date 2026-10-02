@@ -2,7 +2,7 @@ import type { Author } from './author.model';
 
 export type BookLanguage = 'es' | 'ca' | 'en';
 
-// Los mismos valores que acepta el modelo Book del backend del S5
+// Los mismos valores que acepta el modelo Book del backend
 export const BOOK_LANGUAGES: BookLanguage[] = ['es', 'ca', 'en'];
 export const BOOK_TAGS = ['ciencia-ficcion', 'fantasia', 'novela', 'ensayo', 'poesia', 'historia'];
 
