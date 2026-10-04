@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { Author } from '../models';
+import { Author, AuthorsPage } from '../models';
 import { environment } from '../../environments/environment';
 import { AuthorService } from './author.service';
 
@@ -29,15 +29,23 @@ describe('AuthorService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('getAuthors() returns the raw { authors } response', () => {
-    let response: Author[] | undefined;
-    service.getAuthors().subscribe((res) => (response = res.authors));
+  it('getAuthors() requests and returns a paginated response', () => {
+    let response: AuthorsPage | undefined;
+    service.getAuthors().subscribe((res) => (response = res));
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/authors`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/authors?page=1&limit=5`);
     expect(req.request.method).toBe('GET');
-    req.flush({ authors: [author] });
+    req.flush({ authors: [author], total: 1, page: 1, pages: 1 });
 
-    expect(response).toEqual([author]);
+    expect(response).toEqual({ authors: [author], total: 1, page: 1, pages: 1 });
+  });
+
+  it('getAuthors() sends the requested page and limit', () => {
+    service.getAuthors(2, 10).subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/authors?page=2&limit=10`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ authors: [], total: 0, page: 2, pages: 0 });
   });
 
   it('getAuthor() returns the raw { author } response', () => {
@@ -83,7 +91,7 @@ describe('AuthorService', () => {
     let failed = false;
     service.getAuthors().subscribe({ error: () => (failed = true) });
     httpMock
-      .expectOne(`${environment.apiUrl}/authors`)
+      .expectOne(`${environment.apiUrl}/authors?page=1&limit=5`)
       .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
 
     expect(failed).toBe(true);

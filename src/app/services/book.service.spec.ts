@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { Book } from '../models';
+import { Book, BooksPage } from '../models';
 import { environment } from '../../environments/environment';
 import { BookService } from './book.service';
 
@@ -32,15 +32,23 @@ describe('BookService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('getBooks() returns the raw { books } response', () => {
-    let response: Book[] | undefined;
-    service.getBooks().subscribe((res) => (response = res.books));
+  it('getBooks() requests and returns a paginated response', () => {
+    let response: BooksPage | undefined;
+    service.getBooks().subscribe((res) => (response = res));
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/books`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/books?page=1&limit=5`);
     expect(req.request.method).toBe('GET');
-    req.flush({ books: [book] });
+    req.flush({ books: [book], total: 1, page: 1, pages: 1 });
 
-    expect(response).toEqual([book]);
+    expect(response).toEqual({ books: [book], total: 1, page: 1, pages: 1 });
+  });
+
+  it('getBooks() sends the requested page and limit', () => {
+    service.getBooks(3, 20).subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/books?page=3&limit=20`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ books: [], total: 0, page: 3, pages: 0 });
   });
 
   it('getBook() returns the raw { book } response', () => {
@@ -78,7 +86,7 @@ describe('BookService', () => {
     let failed = false;
     service.getBooks().subscribe({ error: () => (failed = true) });
     httpMock
-      .expectOne(`${environment.apiUrl}/books`)
+      .expectOne(`${environment.apiUrl}/books?page=1&limit=5`)
       .flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
 
     expect(failed).toBe(true);
