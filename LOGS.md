@@ -68,7 +68,7 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
 ### Bloque F: usar la paginación del servidor
 
 - [x] Adaptar los services a la nueva forma de la respuesta de los listados
-- [ ] Las listas piden cada página a la API en lugar de trocear la lista en memoria; el componente
+- [x] Las listas piden cada página a la API en lugar de trocear la lista en memoria; el componente
   `app-pagination` se reutiliza tal cual
 - [ ] Hacer que el buscador funcione junto con la paginación
 
@@ -118,3 +118,7 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
 - Los services de autores y libros aceptan `page` y `limit` y tipan la respuesta paginada con `AuthorsPage` y `BooksPage`. El selector de autores del formulario de libros pide hasta 100.
 - Verificación: `npx ng lint` sin errores y `npx ng test` con 22 tests en verde.
 
+### 2026-10-04 · Listados paginados desde el servidor
+
+- Autores y libros solicitan cada página al servidor y muestran los metadatos de paginación usando `app-pagination`.
+- Verificación: `npx ng lint` sin errores y `npx ng test` con 25 tests en verde.

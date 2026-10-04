@@ -13,7 +13,7 @@ import { Pagination } from '../pagination/pagination';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { ViewMode, ViewToggle, savedViewMode } from '../view-toggle/view-toggle';
 
-// Libros que se ven en cada página de la tabla
+// Se conserva el tamaño actual de página de la interfaz.
 const PAGE_SIZE = 4;
 
 @Component({
@@ -26,6 +26,8 @@ export class BooksList implements OnInit {
   private bookService = inject(BookService);
 
   books = signal<Book[]>([]);
+  total = signal(0);
+  totalPages = signal(1);
   loading = signal(true);
   error = signal('');
 
@@ -59,19 +61,22 @@ export class BooksList implements OnInit {
     );
   });
 
-  totalPages = computed(() => Math.max(1, Math.ceil(this.filteredBooks().length / PAGE_SIZE)));
-
-  currentPage = computed(() => Math.min(this.page(), this.totalPages()));
-
-  pageBooks = computed(() => {
-    const start = (this.currentPage() - 1) * PAGE_SIZE;
-    return this.filteredBooks().slice(start, start + PAGE_SIZE);
-  });
+  pageBooks = computed(() => this.filteredBooks());
 
   ngOnInit(): void {
-    this.bookService.getBooks().subscribe({
+    this.loadPage(1);
+  }
+
+  loadPage(page: number): void {
+    this.loading.set(true);
+    this.error.set('');
+    this.page.set(page);
+    this.bookService.getBooks(page, PAGE_SIZE).subscribe({
       next: (response) => {
         this.books.set(response.books);
+        this.total.set(response.total);
+        this.totalPages.set(Math.max(response.pages, 1));
+        this.page.set(response.page);
         this.loading.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -89,11 +94,13 @@ export class BooksList implements OnInit {
 
     this.error.set('');
     this.bookService.deleteBook(book._id).subscribe({
-      // La API responde 204 sin datos, así que lo quito yo de la lista
       next: () => {
-      this.books.update((books) => books.filter((b) => b._id !== book._id));
-      this.bookToDelete.set(null);
-    },
+        this.total.update((total) => Math.max(0, total - 1));
+        const totalPages = Math.max(1, Math.ceil(this.total() / PAGE_SIZE));
+        this.totalPages.set(totalPages);
+        this.bookToDelete.set(null);
+        this.loadPage(Math.min(this.page(), totalPages));
+      },
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),
     });
   }

@@ -12,7 +12,7 @@ import { Pagination } from '../pagination/pagination';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { ViewMode, ViewToggle, savedViewMode } from '../view-toggle/view-toggle';
 
-// Autores que se ven en cada página de la tabla
+// Se conserva el tamaño actual de página de la interfaz.
 const PAGE_SIZE = 4;
 
 @Component({
@@ -27,6 +27,8 @@ export class AuthorsList implements OnInit {
 
   // Antes: authors: Author[] = [];
   authors = signal<Author[]>([]);
+  total = signal(0);
+  totalPages = signal(1);
   loading = signal(true);
   error = signal('');
 
@@ -56,20 +58,22 @@ export class AuthorsList implements OnInit {
     );
   });
 
-  totalPages = computed(() => Math.max(1, Math.ceil(this.filteredAuthors().length / PAGE_SIZE)));
-
-  // Si borro el último autor de la última página, así no me quedo en una página vacía
-  currentPage = computed(() => Math.min(this.page(), this.totalPages()));
-
-  pageAuthors = computed(() => {
-    const start = (this.currentPage() - 1) * PAGE_SIZE;
-    return this.filteredAuthors().slice(start, start + PAGE_SIZE);
-  });
+  pageAuthors = computed(() => this.filteredAuthors());
 
   ngOnInit(): void {
-    this.authorService.getAuthors().subscribe({
+    this.loadPage(1);
+  }
+
+  loadPage(page: number): void {
+    this.loading.set(true);
+    this.error.set('');
+    this.page.set(page);
+    this.authorService.getAuthors(page, PAGE_SIZE).subscribe({
       next: (response) => {
         this.authors.set(response.authors);
+        this.total.set(response.total);
+        this.totalPages.set(Math.max(response.pages, 1));
+        this.page.set(response.page);
         this.loading.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -97,11 +101,14 @@ export class AuthorsList implements OnInit {
 
     this.error.set('');
     this.authorService.deleteAuthor(author._id).subscribe({
-      // La API responde 204 sin datos, así que lo quito yo de la lista
-       next: () => {
-      this.authors.update((authors) => authors.filter((a) => a._id !== author._id));
-      this.authorToDelete.set(null);
-    },
+      // Recarga la página para mantenerla completa y ajustar la última tras un borrado.
+      next: () => {
+        this.total.update((total) => Math.max(0, total - 1));
+        const totalPages = Math.max(1, Math.ceil(this.total() / PAGE_SIZE));
+        this.totalPages.set(totalPages);
+        this.authorToDelete.set(null);
+        this.loadPage(Math.min(this.page(), totalPages));
+      },
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),
     });
   }
