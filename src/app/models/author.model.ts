@@ -15,6 +15,13 @@ export interface Author {
   updatedAt?: string;
 }
 
+export interface AuthorsPage {
+  authors: Author[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
 export type CreateAuthor = Omit<Author, '_id' | 'createdAt' | 'updatedAt'> & {
   password?: string;
 };

@@ -1,13 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { Author, CreateAuthor, UpdateAuthor } from '../models';
-
-export interface AuthorListResponse {
-  authors: Author[];
-}
+import { Author, AuthorsPage, CreateAuthor, UpdateAuthor } from '../models';
 
 export interface AuthorResponse {
   author: Author;
@@ -19,8 +15,9 @@ export class AuthorService {
   private baseUrl = `${environment.apiUrl}/authors`;
 
   /** GET /authors */
-  getAuthors(): Observable<AuthorListResponse> {
-    return this.http.get<AuthorListResponse>(this.baseUrl);
+  getAuthors(page = 1, limit = 5): Observable<AuthorsPage> {
+    const params = new HttpParams().set('page', page).set('limit', limit);
+    return this.http.get<AuthorsPage>(this.baseUrl, { params });
   }
 
   /** GET /authors/:id */

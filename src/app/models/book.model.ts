@@ -27,6 +27,13 @@ export interface Book extends Omit<BookInput, 'authors'> {
   updatedAt?: string;
 }
 
+export interface BooksPage {
+  books: Book[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
 export type CreateBook = BookInput;
 
 export type UpdateBook = Partial<BookInput>;
