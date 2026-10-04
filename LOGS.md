@@ -67,7 +67,7 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
 
 ### Bloque F: usar la paginación del servidor
 
-- [ ] Adaptar los services a la nueva forma de la respuesta de los listados
+- [x] Adaptar los services a la nueva forma de la respuesta de los listados
 - [ ] Las listas piden cada página a la API en lugar de trocear la lista en memoria; el componente
   `app-pagination` se reutiliza tal cual
 - [ ] Hacer que el buscador funcione junto con la paginación
@@ -109,9 +109,12 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
 
 ### 2026-10-04 · Corrección de errores de angular-eslint
 
-- En `author-form.ts`, el payload ahora incluye explícitamente los campos del autor y omite
-  `confirmPassword`.
-- En `confirm-modal.html`, el fondo y la ventana responden a Escape; la ventana se identifica como
-  diálogo modal accesible y el clic interior no se propaga al fondo.
+- En `author-form.ts`, el payload ahora incluye explícitamente los campos del autor y omite `confirmPassword`.
+- En `confirm-modal.html`, el fondo y la ventana responden a Escape; la ventana se identifica como diálogo modal accesible y el clic interior no se propaga al fondo.
 - Verificación: `npx ng lint` sin errores y `npx ng test` con 20 tests en verde.
+
+### 2026-10-04 · Adaptación de los services a la paginación
+
+- Los services de autores y libros aceptan `page` y `limit` y tipan la respuesta paginada con `AuthorsPage` y `BooksPage`. El selector de autores del formulario de libros pide hasta 100.
+- Verificación: `npx ng lint` sin errores y `npx ng test` con 22 tests en verde.
 
