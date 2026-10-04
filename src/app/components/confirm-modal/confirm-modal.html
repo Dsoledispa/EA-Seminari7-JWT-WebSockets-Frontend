@@ -1,7 +1,21 @@
 @if (open()) {
-  <div class="overlay" (click)="cancelled.emit()">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <h2>{{ title() }}</h2>
+  <div
+    class="overlay"
+    role="presentation"
+    tabindex="-1"
+    (click)="cancelled.emit()"
+    (keydown.escape)="cancelled.emit()"
+  >
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-modal-title"
+      tabindex="-1"
+      (click)="$event.stopPropagation()"
+      (keydown.escape)="cancelled.emit(); $event.stopPropagation()"
+    >
+      <h2 id="confirm-modal-title">{{ title() }}</h2>
       <p>{{ message() }}</p>
       <div class="actions">
         <button type="button" class="secondary" (click)="cancelled.emit()">
