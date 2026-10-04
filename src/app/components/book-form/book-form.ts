@@ -52,7 +52,7 @@ export class BookForm implements OnInit {
 
   ngOnInit(): void {
     // Los autores hacen falta siempre, son las opciones para elegir los autores del libro
-    this.authorService.getAuthors().subscribe({
+    this.authorService.getAuthors(1, 100).subscribe({
       next: (response) => this.authors.set(response.authors),
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),
     });
