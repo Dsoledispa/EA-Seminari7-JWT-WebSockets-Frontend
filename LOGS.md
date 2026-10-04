@@ -38,7 +38,7 @@ LOGS.md.
 
 - [ ] `structure`: ramas `develop` y de objetivo, identidad del repositorio (nombre, README con el
   stack tecnológico), CONTRIBUTING.md, este LOGS.md y angular-eslint
-- [ ] Resolver los 5 errores que angular-eslint encuentra en el código heredado del S6 (ver la
+- [x] Resolver los 5 errores que angular-eslint encuentra en el código heredado del S6 (ver la
   bitácora)
 
 ### Bloque D: autenticación en Angular
@@ -105,5 +105,13 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
     elementos con foco ni tener evento de teclado, así que con el teclado no se puede cerrar el modal
     pulsando fuera.
 - Tests: 7 ficheros y 20 tests, todos en verde.
-- IA: Claude Code (Anthropic). Prompts: reconocimiento de los dos repositorios y del stack, explicación
-  de Angular para quien viene de React, plan de la tarea `structure` y ejecución de ese plan.
+
+
+### 2026-10-04 · Corrección de errores de angular-eslint
+
+- En `author-form.ts`, el payload ahora incluye explícitamente los campos del autor y omite
+  `confirmPassword`.
+- En `confirm-modal.html`, el fondo y la ventana responden a Escape; la ventana se identifica como
+  diálogo modal accesible y el clic interior no se propaga al fondo.
+- Verificación: `npx ng lint` sin errores y `npx ng test` con 20 tests en verde.
+
