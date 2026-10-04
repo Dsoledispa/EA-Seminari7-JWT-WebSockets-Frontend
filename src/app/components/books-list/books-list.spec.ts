@@ -44,4 +44,17 @@ describe('BooksList', () => {
     expect(component.total()).toBe(5);
     expect(component.totalPages()).toBe(2);
   });
+
+  it('requests the first page again when searching', () => {
+    component.search.set('Foundation');
+    component.loadPage(1);
+
+    httpMock
+      .expectOne(`${environment.apiUrl}/books?page=1&limit=4&search=Foundation`)
+      .flush({ books: [], total: 0, page: 1, pages: 0 });
+
+    expect(component.page()).toBe(1);
+    expect(component.total()).toBe(0);
+    expect(component.totalPages()).toBe(1);
+  });
 });

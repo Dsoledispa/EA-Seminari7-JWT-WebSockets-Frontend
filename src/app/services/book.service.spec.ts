@@ -44,9 +44,9 @@ describe('BookService', () => {
   });
 
   it('getBooks() sends the requested page and limit', () => {
-    service.getBooks(3, 20).subscribe();
+    service.getBooks(3, 20, 'Foundation').subscribe();
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/books?page=3&limit=20`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/books?page=3&limit=20&search=Foundation`);
     expect(req.request.method).toBe('GET');
     req.flush({ books: [], total: 0, page: 3, pages: 0 });
   });

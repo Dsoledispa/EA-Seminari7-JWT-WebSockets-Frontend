@@ -25,8 +25,10 @@ LOGS.md.
   usuarios con sesión iniciada.
 - **Modelos**: `users`, `authors` y `books`. La autenticación vive solo en `User`: los campos
   `password` y `role` que `Author` traía del Seminario 5 se eliminan.
-- **Paginación**: `GET /authors?page=&limit=` y `GET /books?page=&limit=`, por defecto `page=1` y
-  `limit=5`. Responden `{ authors, total, page, pages }` y `{ books, total, page, pages }`.
+- **Paginación y búsqueda**: `GET /authors?page=&limit=&search=` y
+  `GET /books?page=&limit=&search=`, por defecto `page=1` y `limit=5` (máximo 100). `search` es
+  opcional y busca parcialmente, sin distinguir mayúsculas: autores por nombre/email y libros por
+  título/ISBN/descripción. Los metadatos de la respuesta se calculan sobre los resultados filtrados.
 - **Autores borrados**: un autor borrado (borrado lógico) sigue apareciendo dentro de sus libros.
 - **Chat** (extra): por concretar al empezar el bloque B del backend: los payloads de `chat:join` y
   `chat:message`, la forma del mensaje que emite el servidor (usuario, texto, fecha), cómo llega el
@@ -70,12 +72,11 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
 - [x] Adaptar los services a la nueva forma de la respuesta de los listados
 - [x] Las listas piden cada página a la API en lugar de trocear la lista en memoria; el componente
   `app-pagination` se reutiliza tal cual
-- [ ] Hacer que el buscador funcione junto con la paginación
+- [x] Hacer que el buscador funcione junto con la paginación
 
 ### Extra opcional
 
-- [ ] Que el rol `user` pueda ver la lista de libros (solo lectura), para que tenga algo más que el
-  chat. Va después del bloque D y necesita su pareja en el backend
+- [ ] Que el rol `user` pueda ver la lista de libros (solo lectura), para que tenga algo más que el chat. Va después del bloque D y necesita su pareja en el backend
 
 ## Bitácora
 
@@ -122,3 +123,16 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
 
 - Autores y libros solicitan cada página al servidor y muestran los metadatos de paginación usando `app-pagination`.
 - Verificación: `npx ng lint` sin errores y `npx ng test` con 25 tests en verde.
+
+### 2026-10-04 · Búsqueda con paginación del servidor
+
+- Los listados envían `search` a la API; al cambiar el término vuelven a la primera página y el
+  servidor filtra antes de paginar. Las peticiones anteriores se cancelan para evitar resultados
+  desactualizados.
+- La API admite búsqueda parcial sin distinguir mayúsculas en autores (nombre/email) y libros
+  (título/ISBN/descripción), aplicándola antes de contar y paginar.
+- Verificación: `npx ng lint` sin errores, `npx ng test` con 27 tests en verde; el backend pasa
+  `npm run lint` y `npm run build`.
+- Prompt: «Hacer que el buscador funcione junto con la paginación del servidor en autores y libros;
+  agregar búsqueda al backend y al frontend para que los metadatos de paginación correspondan a los
+  resultados filtrados».

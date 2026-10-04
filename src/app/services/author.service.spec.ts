@@ -41,9 +41,9 @@ describe('AuthorService', () => {
   });
 
   it('getAuthors() sends the requested page and limit', () => {
-    service.getAuthors(2, 10).subscribe();
+    service.getAuthors(2, 10, ' Ada ').subscribe();
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/authors?page=2&limit=10`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/authors?page=2&limit=10&search=Ada`);
     expect(req.request.method).toBe('GET');
     req.flush({ authors: [], total: 0, page: 2, pages: 0 });
   });

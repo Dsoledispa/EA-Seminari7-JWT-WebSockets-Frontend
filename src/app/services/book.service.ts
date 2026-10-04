@@ -15,9 +15,10 @@ export class BookService {
   private baseUrl = `${environment.apiUrl}/books`;
 
   /** GET /books */
-  getBooks(page = 1, limit = 5): Observable<BooksPage> {
+  getBooks(page = 1, limit = 5, search = ''): Observable<BooksPage> {
     const params = new HttpParams().set('page', page).set('limit', limit);
-    return this.http.get<BooksPage>(this.baseUrl, { params });
+    const searchParams = search.trim() ? params.set('search', search.trim()) : params;
+    return this.http.get<BooksPage>(this.baseUrl, { params: searchParams });
   }
 
   /** GET /books/:id */

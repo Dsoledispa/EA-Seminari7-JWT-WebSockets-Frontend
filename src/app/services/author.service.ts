@@ -15,9 +15,10 @@ export class AuthorService {
   private baseUrl = `${environment.apiUrl}/authors`;
 
   /** GET /authors */
-  getAuthors(page = 1, limit = 5): Observable<AuthorsPage> {
+  getAuthors(page = 1, limit = 5, search = ''): Observable<AuthorsPage> {
     const params = new HttpParams().set('page', page).set('limit', limit);
-    return this.http.get<AuthorsPage>(this.baseUrl, { params });
+    const searchParams = search.trim() ? params.set('search', search.trim()) : params;
+    return this.http.get<AuthorsPage>(this.baseUrl, { params: searchParams });
   }
 
   /** GET /authors/:id */

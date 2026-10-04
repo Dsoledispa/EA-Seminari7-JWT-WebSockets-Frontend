@@ -3,6 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
 
 import { Author } from '../../models';
 import { AuthorService } from '../../services/author.service';
@@ -24,6 +26,7 @@ const PAGE_SIZE = 4;
 export class AuthorsList implements OnInit {
   private authorService = inject(AuthorService);
   private router = inject(Router);
+  private pageRequests = new Subject<{ page: number; search: string }>();
 
   // Antes: authors: Author[] = [];
   authors = signal<Author[]>([]);
@@ -49,38 +52,40 @@ export class AuthorsList implements OnInit {
       : '';
   });
 
-  // Me quedo con los autores cuyo nombre o email contiene lo que se ha escrito
-  filteredAuthors = computed(() => {
-    const text = this.search().trim().toLowerCase();
-    return this.authors().filter(
-      (author) =>
-        author.name.toLowerCase().includes(text) || author.email.toLowerCase().includes(text),
-    );
-  });
+  pageAuthors = computed(() => this.authors());
 
-  pageAuthors = computed(() => this.filteredAuthors());
+  constructor() {
+    this.pageRequests
+      .pipe(
+        switchMap(({ page, search }) => {
+          this.loading.set(true);
+          this.error.set('');
+          return this.authorService.getAuthors(page, PAGE_SIZE, search).pipe(
+            tap((response) => {
+              this.authors.set(response.authors);
+              this.total.set(response.total);
+              this.totalPages.set(Math.max(response.pages, 1));
+              this.page.set(response.page);
+            }),
+            catchError((err: HttpErrorResponse) => {
+              this.error.set(apiErrorMessage(err));
+              return EMPTY;
+            }),
+            finalize(() => this.loading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe();
+  }
 
   ngOnInit(): void {
     this.loadPage(1);
   }
 
   loadPage(page: number): void {
-    this.loading.set(true);
-    this.error.set('');
     this.page.set(page);
-    this.authorService.getAuthors(page, PAGE_SIZE).subscribe({
-      next: (response) => {
-        this.authors.set(response.authors);
-        this.total.set(response.total);
-        this.totalPages.set(Math.max(response.pages, 1));
-        this.page.set(response.page);
-        this.loading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(err));
-        this.loading.set(false);
-      },
-    });
+    this.pageRequests.next({ page, search: this.search().trim() });
   }
 
   edit(author: Author): void {

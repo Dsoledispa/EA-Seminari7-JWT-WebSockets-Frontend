@@ -11,6 +11,7 @@
     placeholder="Buscar por nombre o email"
     aria-label="Buscar autores"
     [(ngModel)]="search"
+    (ngModelChange)="loadPage(1)"
   />
   <app-view-toggle [(mode)]="viewMode" />
 </div>

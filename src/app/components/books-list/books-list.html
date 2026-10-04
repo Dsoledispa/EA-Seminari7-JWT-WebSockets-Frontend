@@ -10,6 +10,7 @@
     placeholder="Buscar por título, ISBN o descripción"
     aria-label="Buscar libros"
     [(ngModel)]="search"
+    (ngModelChange)="loadPage(1)"
   />
   <app-view-toggle [(mode)]="viewMode" />
 </div>

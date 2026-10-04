@@ -3,6 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
 
 import { Book } from '../../models';
 import { LanguageNamePipe } from '../../pipes/language-name-pipe';
@@ -24,6 +26,7 @@ const PAGE_SIZE = 4;
 })
 export class BooksList implements OnInit {
   private bookService = inject(BookService);
+  private pageRequests = new Subject<{ page: number; search: string }>();
 
   books = signal<Book[]>([]);
   total = signal(0);
@@ -50,40 +53,40 @@ export class BooksList implements OnInit {
       ? `¿Borrar el libro "${book.title}"?`
       : '';
   });
-  // Me quedo con los libros cuyo título o ISBN contiene lo que se ha escrito
-  filteredBooks = computed(() => {
-    const text = this.search().trim().toLowerCase();
-    return this.books().filter(
-      (book) => 
-        book.title.toLowerCase().includes(text) || 
-        book.isbn.toLowerCase().includes(text) ||
-        (book.description && book.description.toLowerCase().includes(text))
-    );
-  });
+  pageBooks = computed(() => this.books());
 
-  pageBooks = computed(() => this.filteredBooks());
+  constructor() {
+    this.pageRequests
+      .pipe(
+        switchMap(({ page, search }) => {
+          this.loading.set(true);
+          this.error.set('');
+          return this.bookService.getBooks(page, PAGE_SIZE, search).pipe(
+            tap((response) => {
+              this.books.set(response.books);
+              this.total.set(response.total);
+              this.totalPages.set(Math.max(response.pages, 1));
+              this.page.set(response.page);
+            }),
+            catchError((err: HttpErrorResponse) => {
+              this.error.set(apiErrorMessage(err));
+              return EMPTY;
+            }),
+            finalize(() => this.loading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe();
+  }
 
   ngOnInit(): void {
     this.loadPage(1);
   }
 
   loadPage(page: number): void {
-    this.loading.set(true);
-    this.error.set('');
     this.page.set(page);
-    this.bookService.getBooks(page, PAGE_SIZE).subscribe({
-      next: (response) => {
-        this.books.set(response.books);
-        this.total.set(response.total);
-        this.totalPages.set(Math.max(response.pages, 1));
-        this.page.set(response.page);
-        this.loading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(err));
-        this.loading.set(false);
-      },
-    });
+    this.pageRequests.next({ page, search: this.search().trim() });
   }
 
   confirmDelete(): void {
