@@ -33,12 +33,7 @@ Lo que ya está instalado y funcionando:
 | [jsdom](https://github.com/jsdom/jsdom) | 28.1 | Simula el navegador dentro de Node para que los tests puedan pintar componentes |
 | [ESLint](https://eslint.org/) + [angular-eslint](https://github.com/angular-eslint/angular-eslint) | 10.12 / 21.4 | Linter: analiza el TypeScript y también las plantillas HTML, con reglas propias de Angular y de accesibilidad |
 | [Prettier](https://prettier.io/) | 3.9 | Da formato al código (reglas en `.prettierrc`, con el parser de Angular para los `.html`) |
-
-Lo que se añadirá durante el seminario (todavía **no** está instalado):
-
-| Tecnología | Para qué se usará |
-|---|---|
-| [socket.io-client](https://socket.io/docs/v4/client-api/) | Cliente de WebSockets del chat, encapsulado en un servicio de Angular |
+| [socket.io-client](https://socket.io/docs/v4/client-api/) | 4.8 | Cliente de WebSockets del chat, encapsulado en `ChatService` |
 
 El token JWT no necesita librería: el interceptor y el guard se hacen con lo que ya trae Angular.
 
@@ -98,17 +93,21 @@ También se puede crear una cuenta en "Registrarse". Las cuentas nuevas son siem
 ## Configuración: un solo fichero
 
 El frontend no usa `.env`: lo que llega al navegador lo puede leer cualquiera, así que aquí no hay
-secretos. Toda la configuración está en **un** fichero, y para cambiar la dirección de la API se toca
+secretos. Toda la configuración está en **un** fichero, y para cambiar la dirección de la API o del chat se toca
 aquí y en ningún sitio más:
 
 ```typescript
 // src/environments/environment.ts
 export const environment = {
-  apiUrl: 'http://localhost:1337'
+  // URL usada por las llamadas HTTP.
+  apiUrl: 'http://localhost:1337',
+
+  // URL base usada para conectar con Socket.IO.
+  socketUrl: 'http://localhost:1337',
 };
 ```
 
-Cuando llegue el chat, la dirección del servidor de sockets también irá aquí.
+Las dos son iguales porque el backend sirve la API y el chat en el mismo puerto.
 
 ## Scripts
 
@@ -126,7 +125,8 @@ Cuando llegue el chat, la dirección del servidor de sockets también irá aquí
 |---|---|---|
 | `/login` | Iniciar sesión | Solo sin sesión |
 | `/register` | Crear una cuenta | Solo sin sesión |
-| `/` | Inicio: saludo, rol y accesos al backoffice si es admin | Con sesión |
+| `/` | Inicio: saludo, rol, acceso al chat y al backoffice si es admin | Con sesión |
+| `/chat` | Chat en tiempo real: general, de grupo y directo | Con sesión |
 | `/authors` | Lista de autores (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
 | `/authors/new` | Nuevo autor | Admin |
 | `/authors/:id/edit` | Editar autor | Admin |
@@ -153,6 +153,7 @@ src/
       login/               Iniciar sesión
       register/            Crear una cuenta
       home/                Página de inicio para cualquier usuario con sesión
+      chat/                Chat: pestañas general, grupo y directo, mensajes y estado de la conexión
       authors-list/        Lista de autores
       author-card/         Tarjeta de un autor (componente hijo de la lista)
       author-form/         Crear y editar autores
@@ -169,6 +170,7 @@ src/
       auth.service.ts        register, login, refresh, logout y el usuario con sesión (signal)
       author.service.ts      getAuthors, getAuthor, createAuthor, updateAuthor, deleteAuthor
       book.service.ts        getBooks, getBook, createBook, updateBook, deleteBook
+      chat.service.ts        El socket del chat: connect, joinRoom, sendMessage y los eventos como Observables
     pipes/                 Formatean datos en la plantilla
       language-name-pipe.ts  'es' -> 'Castellano'
       truncate-pipe.ts       Corta textos largos con "..."
@@ -223,6 +225,21 @@ aplicación real con datos sensibles, la cookie HttpOnly es la opción más segu
 Los guards y el ocultar botones son solo comodidad: quien protege los datos es el backend, que
 comprueba el token y el rol en cada petición. Desde las herramientas del navegador se puede saltar un
 guard, pero la API seguiría respondiendo 401 o 403.
+
+## Chat
+
+El chat no usa HTTP sino un WebSocket con [socket.io](https://socket.io/): una conexión que se queda
+abierta para que el servidor pueda avisar en cuanto alguien escribe. Cómo está hecho por dentro
+(servicio, Observables, recorrido de un mensaje) está en el
+[apartado 14 de la GUIA](GUIA.md#14-chat-con-websockets); los eventos y los nombres de las salas, en
+el Contrato de [LOGS.md](LOGS.md).
+
+- **General**: la sala de todos.
+- **Grupo**: se escribe un nombre (por ejemplo `seminario-7`) y entra quien escriba el mismo.
+- **Directo**: se elige otro usuario de la lista. Solo pueden leerlo y escribir en él esos dos usuarios.
+
+Al entrar en una sala llegan los últimos 50 mensajes. Para probarlo hacen falta dos sesiones a la vez,
+por ejemplo una ventana normal con `admin@example.com` y una de incógnito con `user@example.com`.
 
 ## Cosas de la API que hay que saber
 

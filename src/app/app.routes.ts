@@ -4,6 +4,7 @@ import { AuthorForm } from './components/author-form/author-form';
 import { AuthorsList } from './components/authors-list/authors-list';
 import { BookForm } from './components/book-form/book-form';
 import { BooksList } from './components/books-list/books-list';
+import { Chat } from './components/chat/chat';
 import { Home } from './components/home/home';
 import { Login } from './components/login/login';
 import { Register } from './components/register/register';
@@ -43,6 +44,7 @@ export const routes: Routes = [
     canActivate: [authGuard, adminGuard],
     title: 'Nuevo libro',
   },
+  { path: 'chat', component: Chat, canActivate: [authGuard], title: 'Chat' },
   {
     path: 'books/:id/edit',
     component: BookForm,
