@@ -11,6 +11,43 @@
     </p>
   </header>
 
+  <!-- Quién tiene el chat abierto ahora mismo. El servidor avisa (users:online) cada vez que
+       alguien entra o sale, y la lista se actualiza sola -->
+  <section class="people" aria-labelledby="people-title">
+    <h2 id="people-title" class="people-title">
+      Usuarios <span class="muted">· {{ onlineCount() }} en el chat</span>
+    </h2>
+    <ul class="people-list">
+      @if (me(); as me) {
+        <li>
+          <span class="person me" [class.online]="connected()">
+            <span class="connection-indicator" aria-hidden="true"></span>
+            {{ me.name }} (tú)
+          </span>
+        </li>
+      }
+      @for (person of people(); track person._id) {
+        <li>
+          <button
+            type="button"
+            class="person"
+            [class.online]="person.online"
+            [title]="
+              (person.online ? 'En el chat' : 'No está en el chat') + ' · abrir chat directo'
+            "
+            (click)="openDirect(person._id)"
+          >
+            <span class="connection-indicator" aria-hidden="true"></span>
+            {{ person.name }}
+            <span class="visually-hidden">{{
+              person.online ? '(en el chat)' : '(no está en el chat)'
+            }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+
   @if (error()) {
     <p class="chat-error" role="alert">{{ error() }}</p>
   }
@@ -77,8 +114,10 @@
         [disabled]="users().length === 0"
       >
         <option value="">Selecciona un usuario</option>
-        @for (user of users(); track user._id) {
-          <option [value]="user._id">{{ user.name }}</option>
+        @for (person of people(); track person._id) {
+          <option [value]="person._id">
+            {{ person.name }}{{ person.online ? ' · en el chat' : '' }}
+          </option>
         }
       </select>
       @if (users().length === 0) {

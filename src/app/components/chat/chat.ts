@@ -5,6 +5,7 @@ import {
   Component,
   OnDestroy,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -15,6 +16,11 @@ import { AuthService } from '../../services/auth.service';
 import { ChatMessage, ChatService, ChatUser } from '../../services/chat.service';
 
 type ChatLevel = 'general' | 'group' | 'direct';
+
+// Un usuario de la lista, con su estado de conexión
+export interface ChatPerson extends ChatUser {
+  online: boolean;
+}
 
 @Component({
   selector: 'app-chat',
@@ -37,6 +43,24 @@ export class Chat implements OnInit, OnDestroy {
   readonly messageText = signal('');
   readonly error = signal('');
   readonly activeRoom = signal('general');
+  readonly onlineIds = signal<string[]>([]);
+
+  // El usuario con sesión, para mostrarlo el primero de la lista como "tú"
+  readonly me = this.authService.user;
+
+  // Los demás usuarios con su estado: primero los conectados y después por nombre.
+  // computed se recalcula solo cuando cambia la lista de usuarios o la de conectados.
+  readonly people = computed<ChatPerson[]>(() => {
+    const online = new Set(this.onlineIds());
+    return this.users()
+      .map((user) => ({ ...user, online: online.has(user._id) }))
+      .sort((a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name));
+  });
+
+  // Cuántos están conectados, contando al propio usuario si su socket está abierto
+  readonly onlineCount = computed(
+    () => this.people().filter((person) => person.online).length + (this.connected() ? 1 : 0),
+  );
 
   ngOnInit(): void {
     // Suscribirse antes de conectar evita perder eventos que lleguen pronto.
@@ -69,6 +93,10 @@ export class Chat implements OnInit, OnDestroy {
           this.messages.update((messages) => [...messages, message]);
         }
       }),
+    );
+
+    this.subscriptions.add(
+      this.chatService.onlineUsers$.subscribe((userIds) => this.onlineIds.set(userIds)),
     );
 
     this.subscriptions.add(
@@ -138,6 +166,12 @@ export class Chat implements OnInit, OnDestroy {
       this.messages.set([]);
       this.joinActiveRoom();
     }
+  }
+
+  // Pulsar un usuario de la lista abre el chat directo con él
+  openDirect(userId: string): void {
+    this.selectedUserId.set(userId);
+    this.setChatLevel('direct');
   }
 
   sendMessage(): void {
