@@ -40,6 +40,12 @@ describe('ChatService', () => {
     expect(names).toEqual(['Admin', 'Usuario']);
   });
 
+  it('starts with nobody online', () => {
+    let ids: string[] | undefined;
+    service.onlineUsers$.subscribe((v) => (ids = v));
+    expect(ids).toEqual([]);
+  });
+
   it('connect() refuses to connect without a session token', () => {
     expect(() => service.connect()).toThrowError(
       'No hay un token de sesión para conectar al chat.',

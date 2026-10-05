@@ -49,7 +49,8 @@ LOGS.md.
     a 2000 caracteres; hay que haber entrado antes en la sala).
   - Del servidor al cliente: `chat:history` (solo a quien entra: los 50 últimos mensajes de la sala,
     del más antiguo al más nuevo), `chat:message` (a toda la sala, también a quien lo escribió) y
-    `chat:error` con `{ message }`.
+    `chat:error` con `{ message }` y `users:online` (a todos, cada vez que alguien abre o cierra el
+    chat: la lista de ids de los usuarios conectados).
   - Un mensaje es `{ _id, room, user: { _id, name }, text, timestamp }`.
   - `GET /users` (con sesión, cualquier rol) responde `{ users: [{ _id, name }] }`, ordenados por
     nombre, para elegir con quién hablar en el chat directo.
@@ -232,3 +233,17 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
   directa, historial al entrar), entrar en el chat con el token caducado conecta renovándolo, y con el
   refresh token roto lleva al login; 11 comprobaciones correctas. La prueba completa de autenticación
   del bloque D se repite sin fallos (27 comprobaciones).
+
+### 2026-10-05 · Usuarios conectados en el chat
+
+- Recomendación de los profesores: ver quién está activo. `ChatService` escucha `users:online` y lo
+  expone como `onlineUsers$` (un `BehaviorSubject`, que se vacía al desconectarse). El chat muestra una
+  franja "Usuarios" con un punto verde o gris, el mismo que el indicador "Conectado": uno mismo primero
+  como "(tú)", después los conectados y luego el resto por nombre, y cuántos hay en el chat. Pulsar un
+  usuario abre el chat directo con él, y el desplegable del directo marca "en el chat".
+- Conectado quiere decir "con la página del chat abierta", porque el socket solo vive ahí.
+- Verificación: `npx ng lint` sin errores, `npx ng test` con 63 tests en verde (nuevos: orden y
+  contador de la lista, abrir el directo desde la lista, `onlineUsers$` empieza vacío) y `npx ng
+  build` correcto. En el navegador con dos usuarios, 13 comprobaciones correctas: aparece y
+  desaparece al entrar y salir del chat, cerrar una de dos pestañas no lo desconecta, el contador
+  coincide con los puntos verdes, los conectados van primero y el clic abre el directo.

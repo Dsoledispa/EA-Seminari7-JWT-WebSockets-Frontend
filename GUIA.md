@@ -667,7 +667,9 @@ this.socket.on('chat:message', (message: ChatMessage) => {
 ```
 
 El estado de la conexión es un `BehaviorSubject`: un `Subject` que recuerda su último valor, así quien
-se suscribe tarde sabe al momento si está conectado.
+se suscribe tarde sabe al momento si está conectado. Lo mismo la lista de usuarios conectados
+(`onlineUsers$`): el servidor envía `users:online` cada vez que alguien entra o sale, y el componente la
+cruza con la lista de usuarios en un `computed` para pintar el punto verde o gris.
 
 ### El recorrido de un mensaje
 

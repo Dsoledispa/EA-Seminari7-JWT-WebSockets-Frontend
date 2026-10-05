@@ -57,6 +57,11 @@ export class ChatService {
   private readonly messageSubject = new Subject<ChatMessage>();
   readonly messages$ = this.messageSubject.asObservable();
 
+  // Ids de los usuarios que tienen el chat abierto. El servidor envía la lista entera cada vez
+  // que alguien entra o sale. Es un BehaviorSubject para que quien se suscriba tarde tenga el valor.
+  private readonly onlineUsersSubject = new BehaviorSubject<string[]>([]);
+  readonly onlineUsers$ = this.onlineUsersSubject.asObservable();
+
   // Errores funcionales enviados por el backend (por ejemplo, sala no válida).
   private readonly chatErrorSubject = new Subject<ChatError>();
   readonly chatError$ = this.chatErrorSubject.asObservable();
@@ -95,6 +100,8 @@ export class ChatService {
 
     this.socket.on('disconnect', () => {
       this.connectionState.next(false);
+      // Sin conexión no sabemos quién está conectado: mejor no enseñar una lista antigua
+      this.onlineUsersSubject.next([]);
     });
 
     this.socket.on('connect_error', (error) => {
@@ -119,6 +126,10 @@ export class ChatService {
 
     this.socket.on('chat:message', (message: ChatMessage) => {
       this.messageSubject.next(message);
+    });
+
+    this.socket.on('users:online', (userIds: string[]) => {
+      this.onlineUsersSubject.next(userIds);
     });
 
     this.socket.on('chat:error', (error: ChatError) => {
@@ -152,5 +163,6 @@ export class ChatService {
     this.socket?.disconnect();
     this.socket = null;
     this.connectionState.next(false);
+    this.onlineUsersSubject.next([]);
   }
 }

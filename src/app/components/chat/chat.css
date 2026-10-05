@@ -53,6 +53,60 @@
   background: #218a49;
 }
 
+.people {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.people-title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.people-title .muted {
+  font-weight: normal;
+}
+
+.people-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada usuario es una "pastilla" con el mismo punto que el indicador de conexión */
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+button.person:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: #eef0fb;
+  color: var(--primary-dark);
+}
+
+.person.online {
+  color: var(--text);
+}
+
+.person.online .connection-indicator {
+  background: #218a49;
+}
+
+.person.me {
+  font-weight: 600;
+}
+
 .chat-error,
 .room-warning {
   margin: 0;
