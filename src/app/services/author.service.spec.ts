@@ -16,7 +16,6 @@ describe('AuthorService', () => {
     email: 'ada@example.com',
     nationality: 'British',
     active: true,
-    role: 'admin',
   };
 
   beforeEach(() => {
@@ -62,13 +61,11 @@ describe('AuthorService', () => {
         name: 'A',
         email: 'a@b.c',
         nationality: 'X',
-        password: 'seminari5',
-        role: 'admin',
       })
       .subscribe();
     const req = httpMock.expectOne(`${environment.apiUrl}/authors`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body.password).toBe('seminari5');
+    expect(req.request.body).toEqual({ name: 'A', email: 'a@b.c', nationality: 'X' });
     req.flush({ author });
   });
 

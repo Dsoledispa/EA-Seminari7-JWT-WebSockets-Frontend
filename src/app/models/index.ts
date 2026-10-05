@@ -1,4 +1,4 @@
-export type { Author, AuthorRole, AuthorsPage, CreateAuthor, UpdateAuthor } from './author.model';
+export type { Author, AuthorsPage, CreateAuthor, UpdateAuthor } from './author.model';
 export type {
   Book,
   BookInput,

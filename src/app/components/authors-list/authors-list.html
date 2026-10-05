@@ -31,8 +31,7 @@
           <th>Email</th>
           <th>Nacionalidad</th>
           <th>Nacimiento</th>
-          <th>Rol</th>
-          <th>Activo</th>
+          <th>Estado</th>
           <th></th>
         </tr>
       </thead>
@@ -47,13 +46,12 @@
             <td>{{ author.birthDate?.slice(0, 10) | date: 'dd/MM/yyyy' }}</td>
             <td>
               <span
-                class="role"
-                [ngStyle]="{ 'background-color': author.role === 'admin' ? '#fde2e1' : '#e3e8fb' }"
+                class="status"
+                [ngStyle]="{ 'background-color': author.active ? '#e3f4e4' : '#eceff1' }"
               >
-                {{ author.role | uppercase }}
+                {{ (author.active ? 'Activo' : 'Inactivo') | uppercase }}
               </span>
             </td>
-            <td>{{ author.active ? 'Sí' : 'No' }}</td>
             <td class="actions">
               <button type="button" class="secondary" (click)="edit(author)">Editar</button>
               <button type="button" class="danger" (click)="deleteAuthor(author)">Borrar</button>
