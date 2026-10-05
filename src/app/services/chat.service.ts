@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, BehaviorSubject, Subject, map } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, map } from 'rxjs';
 import { io, type Socket } from 'socket.io-client';
 
 import { environment } from '../../environments/environment';
@@ -23,6 +23,9 @@ export interface ChatError {
   message: string;
 }
 
+// Mensaje con el que el backend rechaza la conexión si el token falta, es falso o ha caducado
+const AUTH_ERROR = 'Authentication error';
+
 interface ChatUsersResponse {
   users: ChatUser[];
 }
@@ -34,6 +37,9 @@ export class ChatService {
 
   // Guardamos una sola conexión para que los componentes compartan el mismo socket.
   private socket: Socket | null = null;
+
+  // Si el servidor rechaza el token, lo renovamos y reintentamos una sola vez (como el interceptor)
+  private retriedWithNewToken = false;
 
   // Indica si el socket está conectado. El componente podrá observar este estado.
   private readonly connectionState = new BehaviorSubject<boolean>(false);
@@ -68,10 +74,7 @@ export class ChatService {
       return;
     }
 
-    // AuthService obtiene el token que se guardó al iniciar sesión.
-    const token = this.authService.getToken();
-
-    if (!token) {
+    if (!this.authService.getToken()) {
       throw new Error('No hay un token de sesión para conectar al chat.');
     }
 
@@ -80,10 +83,13 @@ export class ChatService {
       autoConnect: false,
 
       // Socket.IO enviará este objeto durante el handshake con el servidor.
-      auth: { token },
+      // Es una función y no un objeto fijo para que cada intento de conexión (también las
+      // reconexiones automáticas) lea el token más reciente, por si se ha renovado.
+      auth: (send) => send({ token: this.authService.getToken() }),
     });
 
     this.socket.on('connect', () => {
+      this.retriedWithNewToken = false;
       this.connectionState.next(true);
     });
 
@@ -92,6 +98,18 @@ export class ChatService {
     });
 
     this.socket.on('connect_error', (error) => {
+      // El socket no pasa por el interceptor HTTP, así que si el access token ha caducado lo
+      // renovamos aquí: pedimos uno nuevo con el refresh token y volvemos a conectar.
+      // Si tampoco se puede renovar, la sesión ha terminado: logout lleva al login.
+      if (error.message === AUTH_ERROR && !this.retriedWithNewToken) {
+        this.retriedWithNewToken = true;
+        this.authService.refresh().subscribe({
+          next: () => this.socket?.connect(),
+          error: () => this.authService.logout(),
+        });
+        return;
+      }
+
       this.connectionErrorSubject.next(error);
     });
 
@@ -119,26 +137,6 @@ export class ChatService {
   sendMessage(room: string, text: string): void {
     // El servidor obtiene el autor del JWT; el cliente solo envía sala y texto.
     this.emit('chat:message', { room, text });
-  }
-
-  listen<T>(eventName: string): Observable<T> {
-    return new Observable<T>((subscriber) => {
-      const socket = this.socket;
-
-      if (!socket) {
-        subscriber.error(
-          new Error('Primero debes conectar el servicio de chat.'),
-        );
-        return;
-      }
-
-      // El Observable recibe los datos cuando llega el evento indicado.
-      const handler = (data: T) => subscriber.next(data);
-      socket.on(eventName, handler);
-
-      // Al cancelar la suscripción, dejamos de escuchar este evento.
-      return () => socket.off(eventName, handler);
-    });
   }
 
   emit<T>(eventName: string, payload: T): void {
