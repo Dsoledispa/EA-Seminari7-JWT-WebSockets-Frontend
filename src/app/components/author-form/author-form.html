@@ -29,30 +29,6 @@
     </label>
 
     <label>
-      Contraseña *
-      <input type="password" formControlName="password" autocomplete="new-password" />
-      @if (id()) {
-        <small class="hint">La API también la pide al editar: se guardará la que escribas.</small>
-      }
-      @if (form.controls.password.touched && form.controls.password.hasError('required')) {
-        <small class="field-error">La contraseña es obligatoria</small>
-      } @else if (form.controls.password.touched && form.controls.password.hasError('minlength')) {
-        <small class="field-error">Tiene que tener 8 caracteres como mínimo</small>
-      }
-    </label>
-
-    <label>
-  Repetir contraseña *
-  <input type="password" formControlName="confirmPassword" autocomplete="new-password" />
-
-  @if (form.controls.confirmPassword.touched && form.controls.confirmPassword.hasError('required')) {
-    <small class="field-error">Tienes que repetir la contraseña</small>
-  } @else if (form.controls.confirmPassword.touched && form.hasError('passwordMismatch')) {
-    <small class="field-error">Las contraseñas no coinciden</small>
-  }
-</label>
-
-    <label>
       Fecha de nacimiento
       <input type="date" formControlName="birthDate" />
     </label>
@@ -68,14 +44,6 @@
       @if (form.controls.website.touched && form.controls.website.invalid) {
         <small class="field-error">Tiene que empezar por http:// o https://</small>
       }
-    </label>
-
-    <label>
-      Rol
-      <select formControlName="role">
-        <option value="author">Autor</option>
-        <option value="admin">Administrador</option>
-      </select>
     </label>
 
     <label class="checkbox">

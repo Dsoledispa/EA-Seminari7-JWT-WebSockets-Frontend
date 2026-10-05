@@ -17,6 +17,7 @@ código. Para instalarlo y arrancarlo, mira el [README](README.md).
 10. [HttpClient y Observables](#10-httpclient-y-observables)
 11. [Formularios](#11-formularios)
 12. [Depurar con Angular DevTools](#12-depurar-con-angular-devtools)
+13. [Autenticación: interceptor y guards](#13-autenticación-interceptor-y-guards)
 
 ---
 
@@ -263,8 +264,8 @@ versión 20, `*ngIf` y `*ngFor` están marcadas como obsoletas:
 Siguen existiendo las directivas de atributo, que cambian cómo se ve un elemento:
 
 ```html
-<!-- ngStyle: el color de la etiqueta depende del rol -->
-<span class="role" [ngStyle]="{ 'background-color': author.role === 'admin' ? '#fde2e1' : '#e3e8fb' }">
+<!-- ngStyle: el color de la etiqueta depende de si el autor está activo -->
+<span class="status" [ngStyle]="{ 'background-color': author.active ? '#e3f4e4' : '#eceff1' }">
 
 <!-- class binding: la fila sale en gris si el autor no está activo -->
 <tr [class.inactive]="!author.active">
@@ -278,7 +279,7 @@ Un pipe transforma un valor solo para mostrarlo, sin cambiar el dato. Se escribe
 |---|---|---|
 | `date` | `{{ author.birthDate?.slice(0, 10) \| date: 'dd/MM/yyyy' }}` | `29/09/1547` |
 | `currency` | `{{ book.price \| currency: 'EUR' }}` | `€19.90` |
-| `uppercase` | `{{ author.role \| uppercase }}` | `ADMIN` |
+| `uppercase` | `{{ (author.active ? 'Activo' : 'Inactivo') \| uppercase }}` | `ACTIVO` |
 | `languageName` (propio) | `{{ book.language \| languageName }}` | `Castellano` |
 
 Los que llevan `:` reciben parámetros (el formato de la fecha, la moneda...).
@@ -448,12 +449,10 @@ El formulario se define en el TS con sus validadores. Es lo que usan `author-for
 form = this.fb.group({
   name: ['', [Validators.required, Validators.pattern(/\S/)]],
   email: ['', [Validators.required, Validators.email]],
-  password: ['', [Validators.required, Validators.minLength(8)]],
   birthDate: [''],
   nationality: [''],
   website: ['', Validators.pattern(/^https?:\/\/\S+$/)],
   active: [true],
-  role: ['author' as AuthorRole],
 });
 ```
 
@@ -505,3 +504,122 @@ enganchado, y así se pueden poner breakpoints en los `.ts` (F5).
 
 Los tests se pasan con `npm test -- --watch=false` (Vitest): comprueban los servicios, el pipe y que
 la app arranca con su menú.
+
+## 13. Autenticación: interceptor y guards
+
+La autenticación se reparte en cuatro piezas. Cada una hace una sola cosa:
+
+| Pieza | Fichero | Qué hace |
+|---|---|---|
+| Servicio | `services/auth.service.ts` | Habla con `/auth`, guarda la sesión y la expone en signals |
+| Interceptor | `interceptors/auth.interceptor.ts` | Pone el token en cada petición y lo renueva si caduca |
+| Guards | `guards/auth.guard.ts` | Deciden si se puede abrir una pantalla |
+| Pantallas | `components/login`, `register`, `home` | Formularios y página de inicio |
+
+### La sesión en signals
+
+`AuthService` guarda el usuario en una signal privada y la expone de solo lectura. Lo que depende de
+ella se declara con `computed`, y se recalcula solo:
+
+```ts
+// auth.service.ts
+private currentUser = signal<User | null>(readStoredUser());
+readonly user = this.currentUser.asReadonly();
+readonly isLoggedIn = computed(() => this.currentUser() !== null);
+readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
+```
+
+Por eso la barra de navegación cambia sola al iniciar o cerrar sesión, sin que nadie le avise:
+
+```html
+<!-- navbar.html -->
+@if (auth.isAdmin()) {
+  <nav>...Autores y Libros...</nav>
+}
+```
+
+`readStoredUser()` lee el usuario de localStorage al arrancar: así la sesión sobrevive a recargar la
+página. Por qué localStorage y no una cookie está en el README, en el apartado Autenticación.
+
+### El interceptor
+
+Un interceptor es una función por la que pasan **todas** las peticiones de `HttpClient`. Se registra
+una vez en `app.config.ts`:
+
+```ts
+provideHttpClient(withInterceptors([authInterceptor]))
+```
+
+Así ningún servicio (`AuthorService`, `BookService`...) tiene que acordarse de poner el token. El
+interceptor recibe la petición (`request`) y la función que la envía (`next`):
+
+```ts
+// auth.interceptor.ts (resumido)
+export const authInterceptor: HttpInterceptorFn = (request, next) => {
+  const token = inject(AuthService).getToken();
+
+  // Las peticiones son inmutables: clone() hace una copia con la cabecera añadida
+  return next(request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })).pipe(
+    catchError((error) => {
+      // 401 por token caducado: pido otro y repito la petición
+      // cualquier otro 401: cierro la sesión
+      // cualquier otro error: lo dejo pasar al componente
+    }),
+  );
+};
+```
+
+El recorrido cuando el token ha caducado (se puede ver en la pestaña Network de F12):
+
+```
+GET /books              401  { message: 'El token ha caducado' }
+POST /auth/refresh      200  { token: <nuevo> }
+GET /books              200  (la misma petición, con el token nuevo)
+```
+
+El componente solo ve la última respuesta: para él la petición ha ido bien. Esto se consigue con dos
+operadores de RxJS: `catchError` atrapa el 401 y `switchMap` cambia la petición fallida por "renovar y
+repetir".
+
+Las peticiones a `/auth/*` no pasan por esta lógica: el login y el registro no necesitan token, y así
+un 401 del login (contraseña incorrecta) no se confunde con una sesión caducada.
+
+### Los guards
+
+Un guard es una función que se ejecuta antes de abrir una ruta. Devuelve `true` para dejar pasar o
+una URL (`UrlTree`) para mandar a otra pantalla:
+
+```ts
+// auth.guard.ts
+export const authGuard: CanActivateFn = (route, state) => {
+  if (inject(AuthService).isLoggedIn()) {
+    return true;
+  }
+  // Al login, recordando a dónde iba: /login?returnUrl=/books
+  return inject(Router).createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+};
+```
+
+En `app.routes.ts` se ponen en `canActivate`, y se comprueban en orden:
+
+```ts
+{ path: 'books', component: BooksList, canActivate: [authGuard, adminGuard] },
+```
+
+Hay tres: `authGuard` (hace falta sesión), `adminGuard` (hace falta ser admin; un `user` vuelve al
+inicio) y `guestGuard` (solo sin sesión, para que alguien con sesión no vea el login).
+
+Después del login, `Login` lee `returnUrl` como un input (gracias a `withComponentInputBinding`, igual
+que el `:id` de las rutas de editar) y vuelve a esa página. Solo acepta rutas que empiezan por `/`,
+para que un enlace preparado no pueda mandar al usuario a otra web.
+
+Un guard **no es seguridad**: solo decide qué pantallas se enseñan. Quien protege los datos es el
+backend, que comprueba el token y el rol en cada petición.
+
+### Probarlo
+
+- Con `admin@example.com` y `user@example.com` (contraseña `seminari7`) se ve la diferencia entre roles.
+- En F12, pestaña Application, Local Storage: están `token`, `refreshToken` y `user`. El token se
+  puede pegar en https://jwt.io para ver su contenido (`sub`, `role`, `exp`).
+- Para ver la renovación sin esperar 15 minutos, arranca el backend con tokens cortos
+  (`JWT_EXPIRES_IN=20s npm run dev`) y mira la pestaña Network.

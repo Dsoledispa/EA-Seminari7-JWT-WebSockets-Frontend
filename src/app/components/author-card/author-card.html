@@ -15,14 +15,11 @@
     </span>
     <div>
       <span
-        class="role"
-        [ngStyle]="{ 'background-color': author().role === 'admin' ? '#fde2e1' : '#e3e8fb' }"
+        class="status"
+        [ngStyle]="{ 'background-color': author().active ? '#e3f4e4' : '#eceff1' }"
       >
-        {{ author().role | uppercase }}
+        {{ (author().active ? 'Activo' : 'Inactivo') | uppercase }}
       </span>
-      @if (!author().active) {
-        <span class="muted"> · Inactivo</span>
-      }
     </div>
   </div>
   <div class="card-actions">
