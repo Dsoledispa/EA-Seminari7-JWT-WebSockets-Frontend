@@ -18,6 +18,7 @@ código. Para instalarlo y arrancarlo, mira el [README](README.md).
 11. [Formularios](#11-formularios)
 12. [Depurar con Angular DevTools](#12-depurar-con-angular-devtools)
 13. [Autenticación: interceptor y guards](#13-autenticación-interceptor-y-guards)
+14. [Chat con WebSockets](#14-chat-con-websockets)
 
 ---
 
@@ -623,3 +624,96 @@ backend, que comprueba el token y el rol en cada petición.
   puede pegar en https://jwt.io para ver su contenido (`sub`, `role`, `exp`).
 - Para ver la renovación sin esperar 15 minutos, arranca el backend con tokens cortos
   (`JWT_EXPIRES_IN=20s npm run dev`) y mira la pestaña Network.
+
+## 14. Chat con WebSockets
+
+Con `HttpClient` el cliente pregunta y el servidor responde. En un chat hace falta lo contrario: que
+el servidor avise al cliente cuando otro usuario escribe. Para eso se usa un WebSocket, una conexión
+que se queda abierta, con la librería `socket.io-client`. Todo son **eventos** con nombre: un lado los
+envía con `emit` y el otro los recibe con `on`. Los nombres y los datos de cada evento están en el
+Contrato de [LOGS.md](LOGS.md).
+
+### El servicio: un solo socket para toda la app
+
+`services/chat.service.ts` es la única pieza que conoce `socket.io-client`. Crea el socket enviando el
+token en el handshake, igual que el interceptor lo pone en la cabecera de cada petición HTTP:
+
+```ts
+// chat.service.ts
+this.socket = io(environment.socketUrl, {
+  autoConnect: false,
+  // Una función y no un objeto: cada intento de conexión lee el token más reciente
+  auth: (send) => send({ token: this.authService.getToken() }),
+});
+```
+
+El socket no pasa por el interceptor HTTP. Por eso, si el servidor rechaza la conexión porque el
+token ha caducado (`connect_error` con `Authentication error`), el propio servicio lo renueva con
+`authService.refresh()` y vuelve a conectar. Si tampoco puede renovarlo, cierra la sesión.
+
+### Los eventos como Observables
+
+El componente no habla con el socket: se suscribe a Observables del servicio. Cada evento del socket
+se pasa a un `Subject`, que es un Observable al que se le pueden meter valores a mano:
+
+```ts
+// chat.service.ts
+private readonly messageSubject = new Subject<ChatMessage>();
+readonly messages$ = this.messageSubject.asObservable();
+
+this.socket.on('chat:message', (message: ChatMessage) => {
+  this.messageSubject.next(message);
+});
+```
+
+El estado de la conexión es un `BehaviorSubject`: un `Subject` que recuerda su último valor, así quien
+se suscribe tarde sabe al momento si está conectado.
+
+### El recorrido de un mensaje
+
+```
+Chat (componente)          ChatService                 servidor
+sendMessage()      ->      emit('chat:message')  ->    guarda en MongoDB
+                                                       io.to(sala).emit('chat:message')
+messages.update()  <-      messageSubject.next()  <-   on('chat:message')  (a todos los de la sala)
+```
+
+Quien escribe no añade su mensaje a la lista directamente: espera a que el servidor se lo devuelva
+como a los demás. Así todos ven exactamente lo que se ha guardado.
+
+### Salas: general, grupo y directo
+
+Para entrar en una sala, el componente llama a `joinRoom(sala)` y el servidor responde con el
+historial (`chat:history`). El nombre de un chat directo se construye con los dos ids ordenados, para
+que los dos usuarios lleguen a la misma sala sin ponerse de acuerdo:
+
+```ts
+// chat.ts
+const [firstId, secondId] = [currentUserId, otherUserId].sort();
+return `direct:${firstId}:${secondId}`;
+```
+
+El servidor comprueba que quien entra en un chat directo es uno de esos dos usuarios.
+
+### Limpieza en ngOnDestroy
+
+Al salir de la página del chat hay que cerrar lo que se ha abierto. Si no, al volver se acumularían
+suscripciones y conexiones repetidas, y cada mensaje se pintaría varias veces:
+
+```ts
+// chat.ts
+ngOnDestroy(): void {
+  this.subscriptions.unsubscribe(); // todas las suscripciones a la vez
+  this.chatService.disconnect(); // cierra el socket
+}
+```
+
+Las suscripciones se van añadiendo a un único `Subscription` con `this.subscriptions.add(...)`, para
+poder cancelarlas todas con una sola llamada.
+
+### Probarlo
+
+- Abre dos sesiones a la vez (una ventana normal y otra de incógnito) con `admin@example.com` y
+  `user@example.com`, y escribe en la sala general.
+- En F12, pestaña Network, filtro WS: se ve la conexión del socket y, en Messages, cada evento que va
+  y viene.

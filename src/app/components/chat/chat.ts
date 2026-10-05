@@ -151,9 +151,7 @@ export class Chat implements OnInit, OnDestroy {
       this.messageText.set('');
       this.error.set('');
     } catch (error: unknown) {
-      this.error.set(
-        error instanceof Error ? error.message : 'No se pudo enviar el mensaje.',
-      );
+      this.error.set(error instanceof Error ? error.message : 'No se pudo enviar el mensaje.');
     }
   }
 
@@ -171,9 +169,7 @@ export class Chat implements OnInit, OnDestroy {
     try {
       this.chatService.joinRoom(this.activeRoom());
     } catch (error: unknown) {
-      this.error.set(
-        error instanceof Error ? error.message : 'No se pudo entrar en la sala.',
-      );
+      this.error.set(error instanceof Error ? error.message : 'No se pudo entrar en la sala.');
     }
   }
 
