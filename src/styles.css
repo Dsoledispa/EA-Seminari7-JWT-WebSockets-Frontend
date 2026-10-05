@@ -262,3 +262,12 @@ label.checkbox {
   border-radius: var(--radius);
   background: var(--surface);
 }
+
+/* Aviso de que algo ha ido bien (por ejemplo, cuenta creada) */
+.notice {
+  padding: 0.75rem 1rem;
+  border: 1px solid #b7dfb9;
+  border-radius: var(--radius);
+  background: #edf7ed;
+  color: #1e4620;
+}

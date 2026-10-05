@@ -15,18 +15,29 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 LOGS.md.
 
 - **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` se autentica con
-  su propio refresh token. Todo lo demás exige token.
-- **Registro**: responde 201 con el usuario y **sin token**. El frontend redirige entonces a la página
-  de login.
-- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, user }` o 401.
+  su propio refresh token. `GET /ping` y la documentación (`/api-docs`) también son públicas. Todo lo
+  demás exige token.
+- **Registro**: el cuerpo es `{ name, email, password }` (contraseña de 8 caracteres como mínimo;
+  `role` no se acepta, todo usuario nuevo es `user`). Responde 201 con `{ user }` y **sin token**, 409
+  si el email ya existe o 422 si el cuerpo no es válido. El frontend redirige entonces a la página de
+  login.
+- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, refreshToken, user }` o 401. `user`
+  es `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña.
+- **Refresh**: el cuerpo es `{ refreshToken }`. Responde `{ token }` (un access token nuevo) o 401 si el
+  refresh token ha caducado o no es válido. El refresh token no cambia.
 - **Token**: se envía en la cabecera `Authorization: Bearer <token>`. Su payload lleva los claims `sub`
-  (id del usuario), `role` y `exp`.
+  (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días.
+- **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`)
+  o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol necesario.
 - **Roles**: el CRUD del backoffice (autores y libros) es solo para `admin`. El chat es para todos los
   usuarios con sesión iniciada.
-- **Modelos**: `users`, `authors` y `books`. La autenticación vive solo en `User`: los campos
-  `password` y `role` que `Author` traía del Seminario 5 se eliminan.
-- **Paginación**: `GET /authors?page=&limit=` y `GET /books?page=&limit=`, por defecto `page=1` y
-  `limit=5`. Responden `{ authors, total, page, pages }` y `{ books, total, page, pages }`.
+- **Modelos**: `users`, `authors` y `books`. La autenticación vive solo en `User` (`name`, `email`,
+  `password`, `role`): los campos `password` y `role` que `Author` traía del Seminario 5 se eliminan,
+  y enviarlos al crear o editar un autor da 422.
+- **Paginación y búsqueda**: `GET /authors?page=&limit=&search=` y
+  `GET /books?page=&limit=&search=`, por defecto `page=1` y `limit=5` (máximo 100). `search` es
+  opcional y busca parcialmente, sin distinguir mayúsculas: autores por nombre/email y libros por
+  título/ISBN/descripción. Los metadatos de la respuesta se calculan sobre los resultados filtrados.
 - **Autores borrados**: un autor borrado (borrado lógico) sigue apareciendo dentro de sus libros.
 - **Chat** (extra): por concretar al empezar el bloque B del backend: los payloads de `chat:join` y
   `chat:message`, la forma del mensaje que emite el servidor (usuario, texto, fecha), cómo llega el
@@ -36,22 +47,22 @@ LOGS.md.
 
 ### Estructura
 
-- [ ] `structure`: ramas `develop` y de objetivo, identidad del repositorio (nombre, README con el
+- [x] `structure`: ramas `develop` y de objetivo, identidad del repositorio (nombre, README con el
   stack tecnológico), CONTRIBUTING.md, este LOGS.md y angular-eslint
-- [ ] Resolver los 5 errores que angular-eslint encuentra en el código heredado del S6 (ver la
+- [x] Resolver los 5 errores que angular-eslint encuentra en el código heredado del S6 (ver la
   bitácora)
 
 ### Bloque D: autenticación en Angular
 
-- [ ] Pantallas de registro y de login con formularios reactivos y validación; al registrarse se
+- [x] Pantallas de registro y de login con formularios reactivos y validación; al registrarse se
   redirige a la página de login
-- [ ] Quitar de los formularios y modelos de autor los campos `password` y `role` cuando el backend
+- [x] Quitar de los formularios y modelos de autor los campos `password` y `role` cuando el backend
   los elimine (contrato)
-- [ ] `AuthService`: register, login, logout, guardar el token (y documentar por qué localStorage o
+- [x] `AuthService`: register, login, logout, guardar el token (y documentar por qué localStorage o
   cookie HttpOnly, con los riesgos de cada una) y el usuario con sesión en una signal
-- [ ] Interceptor HTTP: añade `Authorization: Bearer` a cada petición; si llega un 401, limpia la sesión
+- [x] Interceptor HTTP: añade `Authorization: Bearer` a cada petición; si llega un 401, limpia la sesión
   y lleva al login (o renueva el token con el refresh, si da tiempo)
-- [ ] Guard `CanActivate` en las rutas protegidas; enseñar u ocultar acciones según el rol
+- [x] Guard `CanActivate` en las rutas protegidas; enseñar u ocultar acciones según el rol
 
 ### Bloque E: chat (extra)
 
@@ -67,15 +78,14 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
 
 ### Bloque F: usar la paginación del servidor
 
-- [ ] Adaptar los services a la nueva forma de la respuesta de los listados
-- [ ] Las listas piden cada página a la API en lugar de trocear la lista en memoria; el componente
+- [x] Adaptar los services a la nueva forma de la respuesta de los listados
+- [x] Las listas piden cada página a la API en lugar de trocear la lista en memoria; el componente
   `app-pagination` se reutiliza tal cual
-- [ ] Hacer que el buscador funcione junto con la paginación
+- [x] Hacer que el buscador funcione junto con la paginación
 
 ### Extra opcional
 
-- [ ] Que el rol `user` pueda ver la lista de libros (solo lectura), para que tenga algo más que el
-  chat. Va después del bloque D y necesita su pareja en el backend
+- [ ] Que el rol `user` pueda ver la lista de libros (solo lectura), para que tenga algo más que el chat. Va después del bloque D y necesita su pareja en el backend
 
 ## Bitácora
 
@@ -105,5 +115,76 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
     elementos con foco ni tener evento de teclado, así que con el teclado no se puede cerrar el modal
     pulsando fuera.
 - Tests: 7 ficheros y 20 tests, todos en verde.
-- IA: Claude Code (Anthropic). Prompts: reconocimiento de los dos repositorios y del stack, explicación
-  de Angular para quien viene de React, plan de la tarea `structure` y ejecución de ese plan.
+
+
+### 2026-10-04 · Corrección de errores de angular-eslint
+
+- En `author-form.ts`, el payload ahora incluye explícitamente los campos del autor y omite `confirmPassword`.
+- En `confirm-modal.html`, el fondo y la ventana responden a Escape; la ventana se identifica como diálogo modal accesible y el clic interior no se propaga al fondo.
+- Verificación: `npx ng lint` sin errores y `npx ng test` con 20 tests en verde.
+
+### 2026-10-04 · Adaptación de los services a la paginación
+
+- Los services de autores y libros aceptan `page` y `limit` y tipan la respuesta paginada con `AuthorsPage` y `BooksPage`. El selector de autores del formulario de libros pide hasta 100.
+- Verificación: `npx ng lint` sin errores y `npx ng test` con 22 tests en verde.
+
+### 2026-10-04 · Listados paginados desde el servidor
+
+- Autores y libros solicitan cada página al servidor y muestran los metadatos de paginación usando `app-pagination`.
+- Verificación: `npx ng lint` sin errores y `npx ng test` con 25 tests en verde.
+
+### 2026-10-04 · Búsqueda con paginación del servidor
+
+- Los listados envían `search` a la API; al cambiar el término vuelven a la primera página y el
+  servidor filtra antes de paginar. Las peticiones anteriores se cancelan para evitar resultados
+  desactualizados.
+- La API admite búsqueda parcial sin distinguir mayúsculas en autores (nombre/email) y libros
+  (título/ISBN/descripción), aplicándola antes de contar y paginar.
+- Verificación: `npx ng lint` sin errores, `npx ng test` con 27 tests en verde; el backend pasa
+  `npm run lint` y `npm run build`.
+- Prompt: «Hacer que el buscador funcione junto con la paginación del servidor en autores y libros;
+  agregar búsqueda al backend y al frontend para que los metadatos de paginación correspondan a los
+  resultados filtrados».
+
+### 2026-10-05 · Autenticación en Angular (Bloque D)
+
+- `AuthService` con `register`, `login`, `refresh`, `logout` y `getToken`. El usuario con sesión está en
+  una signal privada que se expone de solo lectura, con `isLoggedIn` e `isAdmin` como `computed`. Los
+  tokens y el usuario se guardan en `localStorage` y se recuperan al recargar la página.
+- `authInterceptor` (funcional, registrado con `withInterceptors`): añade `Authorization: Bearer` a todas
+  las peticiones salvo las de `/auth/*`. Si llega un 401 con "El token ha caducado", renueva el token con
+  `POST /auth/refresh` y repite la petición una vez; si el refresh falla, o el 401 es por otro motivo,
+  cierra la sesión y lleva al login. El resto de errores (403, 422...) llegan al componente sin tocar la
+  sesión.
+- Guards funcionales: `authGuard` (sin sesión, al login con `returnUrl`), `adminGuard` (un `user` vuelve
+  al inicio) y `guestGuard` (con sesión no se ve el login ni el registro). Van ruta a ruta en
+  `app.routes.ts`: el backoffice entero es `[authGuard, adminGuard]`.
+- Pantallas nuevas: login (vuelve a `returnUrl` si es una ruta de la app), registro (nombre, email,
+  contraseña y repetirla; al terminar lleva al login con el aviso "Cuenta creada") e inicio (saludo, rol
+  y accesos al backoffice si es admin). La barra de navegación enseña Autores y Libros solo a un admin,
+  y el usuario con su rol y "Cerrar sesión" a quien tiene sesión.
+- El autor pierde `password` y `role` en el modelo y en el formulario. El validador de contraseñas
+  repetidas pasa a `utils/password-match.ts` y lo usa el registro. La etiqueta de rol de la lista y de la
+  tarjeta pasa a ser una etiqueta de estado (ACTIVO o INACTIVO) con el mismo `ngStyle` y el pipe
+  `uppercase`, para que los ejemplos de la GUIA sigan teniendo código real; la columna "Activo" de la
+  tabla queda dentro de esa etiqueta.
+- Decisiones:
+  - localStorage y no cookie HttpOnly: encaja con el contrato (los tokens llegan en el JSON) y no pide
+    cambios en el backend. Riesgos de las dos opciones explicados en el README.
+  - Si dos peticiones caducan a la vez, cada una renueva por su cuenta. Es correcto porque el refresh es
+    sin estado y el refresh token no cambia; una cola de peticiones complicaría el código sin ganar nada
+    aquí.
+  - La pantalla de inicio existe porque un `user` no tiene nada que hacer en el backoffice; ahí colgará
+    el chat.
+- Documentación: README (cómo entrar, pantallas con quién puede entrar, estructura y el apartado
+  Autenticación con localStorage frente a cookie) y GUIA (apartado 13, "Autenticación: interceptor y
+  guards"; los ejemplos de `ngStyle`, `uppercase` y del formulario reactivo ya no usan el rol ni la
+  contraseña del autor).
+- Verificación: `npx ng lint` sin errores, `npx ng test` con 51 tests en verde (12 ficheros; nuevos los de
+  `AuthService`, el interceptor, los guards y el login) y `npx ng build` correcto. Prueba de punta a punta
+  en un navegador (Playwright y Chromium) contra el backend real con tokens de 20 segundos: 27
+  comprobaciones correctas, entre ellas el registro con aviso de contraseñas distintas y de email
+  repetido, el login fallido, que un `user` no ve ni puede abrir el backoffice, el cierre de sesión, que
+  el admin vuelve a la URL que pedía, crear un autor sin contraseña, la renovación automática (`401`,
+  `refresh 200` y la misma petición `200`, sin pasar por el login) y que con el refresh token roto se
+  cierra la sesión.

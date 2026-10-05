@@ -1,7 +1,8 @@
 # Seminari 7: frontend Angular con JWT y WebSockets
 
 Backoffice en Angular para gestionar **autores** y **libros**: desde aquí se pueden listar, buscar,
-crear, editar y borrar. Es el frontend del Seminario 7 de EA:
+crear, editar y borrar. Para entrar hay que iniciar sesión, y el backoffice es solo para
+administradores. Es el frontend del Seminario 7 de EA:
 
 > Backend/Frontend: JWT, WebSockets. Backend TS + Express. Frontend Angular.
 
@@ -69,8 +70,10 @@ npm run dev
 ```
 
 La API queda en http://localhost:1337 y su documentación (Swagger) en http://localhost:1337/api-docs.
-`npm run seed` mete 5 autores y 12 libros de ejemplo; con `npm run seed -- --reset` se vuelven a poner
-desde cero.
+`npm run seed` mete 2 usuarios, 12 autores y 12 libros de ejemplo; con `npm run seed -- --reset` se
+vuelven a poner desde cero. Si tu base de datos es de antes del Seminario 7, ejecuta una de las dos
+cosas: `npm run migrate-authors` o `npm run seed -- --reset` (lo explica el README del backend).
+Si ya tenías un `.env`, copia en él las variables `JWT_...` de `.env.example`.
 
 **2. Frontend (este repo)**
 
@@ -82,6 +85,15 @@ npm start
 ```
 
 Y se abre http://localhost:4200. La página se recarga sola cada vez que guardas un archivo.
+
+**3. Iniciar sesión** con uno de los usuarios del seed (las contraseñas son públicas a propósito):
+
+| Email | Contraseña | Qué ve |
+|---|---|---|
+| `admin@example.com` | `seminari7` | El backoffice entero: autores y libros |
+| `user@example.com` | `seminari7` | Solo la página de inicio: el backoffice es para administradores |
+
+También se puede crear una cuenta en "Registrarse". Las cuentas nuevas son siempre de rol `user`.
 
 ## Configuración: un solo fichero
 
@@ -110,14 +122,20 @@ Cuando llegue el chat, la dirección del servidor de sockets también irá aquí
 
 ## Pantallas
 
-| Ruta | Pantalla |
-|---|---|
-| `/authors` | Lista de autores (en tabla o en tarjetas): buscador, paginación, editar y borrar |
-| `/authors/new` | Nuevo autor |
-| `/authors/:id/edit` | Editar autor |
-| `/books` | Lista de libros (en tabla o en tarjetas): buscador, paginación, editar y borrar |
-| `/books/new` | Nuevo libro |
-| `/books/:id/edit` | Editar libro |
+| Ruta | Pantalla | Quién entra |
+|---|---|---|
+| `/login` | Iniciar sesión | Solo sin sesión |
+| `/register` | Crear una cuenta | Solo sin sesión |
+| `/` | Inicio: saludo, rol y accesos al backoffice si es admin | Con sesión |
+| `/authors` | Lista de autores (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
+| `/authors/new` | Nuevo autor | Admin |
+| `/authors/:id/edit` | Editar autor | Admin |
+| `/books` | Lista de libros (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
+| `/books/new` | Nuevo libro | Admin |
+| `/books/:id/edit` | Editar libro | Admin |
+
+Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o al inicio (un `user` que
+intenta entrar en el backoffice).
 
 ## Estructura del proyecto
 
@@ -127,11 +145,14 @@ src/
   environments/
     environment.ts         La única configuración: la URL de la API
   app/
-    app.config.ts          Providers de toda la app: router y HttpClient
+    app.config.ts          Providers de toda la app: router y HttpClient (con el interceptor)
     app.routes.ts          El mapa de rutas: qué URL pinta qué componente
     app.ts, app.html       Componente raíz: la barra de navegación y el <router-outlet>
     components/
-      navbar/              Menú de arriba
+      navbar/              Menú de arriba: enlaces según el rol, usuario con sesión y cerrar sesión
+      login/               Iniciar sesión
+      register/            Crear una cuenta
+      home/                Página de inicio para cualquier usuario con sesión
       authors-list/        Lista de autores
       author-card/         Tarjeta de un autor (componente hijo de la lista)
       author-form/         Crear y editar autores
@@ -143,15 +164,22 @@ src/
     models/                Interfaces TypeScript con la forma de los datos de la API
       author.model.ts        Author, CreateAuthor, UpdateAuthor
       book.model.ts          Book, BookInput, CreateBook, UpdateBook, BOOK_LANGUAGES, BOOK_TAGS
+      user.model.ts          User, UserRole y las peticiones y respuestas de /auth
     services/              Las únicas piezas que hablan con la API (HttpClient)
+      auth.service.ts        register, login, refresh, logout y el usuario con sesión (signal)
       author.service.ts      getAuthors, getAuthor, createAuthor, updateAuthor, deleteAuthor
       book.service.ts        getBooks, getBook, createBook, updateBook, deleteBook
     pipes/                 Formatean datos en la plantilla
       language-name-pipe.ts  'es' -> 'Castellano'
       truncate-pipe.ts       Corta textos largos con "..."
+    interceptors/
+      auth.interceptor.ts  Añade el token a cada petición y lo renueva si ha caducado
+    guards/
+      auth.guard.ts        authGuard, adminGuard y guestGuard: quién puede entrar en cada ruta
     utils/
       api-error.ts         Pasa un error de HttpClient a un texto para la pantalla
       remove-empty.ts      Quita los campos vacíos antes de enviar un formulario
+      password-match.ts    Validador: la contraseña y su repetición coinciden
 ```
 
 Un dato viaja siempre por el mismo camino, igual que en el backend cada capa hace una sola cosa:
@@ -161,12 +189,45 @@ componente -> service (HttpClient) -> API -> respuesta -> subscribe -> signal ->
 ```
 
 Los componentes no saben de URLs ni de HTTP: piden los datos al service y guardan el resultado en una
-signal.
+signal. Tampoco saben del token: lo añade el interceptor a todas las peticiones.
+
+## Autenticación
+
+Cómo funciona por dentro (interceptor, guards, renovación del token) está en el
+[apartado 13 de la GUIA](GUIA.md#13-autenticación-interceptor-y-guards). En resumen:
+
+1. En el login, la API devuelve `{ token, refreshToken, user }` y `AuthService` lo guarda todo.
+2. `authInterceptor` añade `Authorization: Bearer <token>` a cada petición.
+3. El access token caduca a los 15 minutos. Cuando la API responde 401 con "El token ha caducado", el
+   interceptor pide uno nuevo a `POST /auth/refresh` y repite la petición, sin que el usuario lo note.
+   Si el refresh token también ha caducado (a los 7 días), cierra la sesión y lleva al login.
+4. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol.
+
+### Dónde se guardan los tokens: localStorage o cookie HttpOnly
+
+Los guardamos en **localStorage** (con las claves `token`, `refreshToken` y `user`). Las dos opciones
+que se suelen comparar:
+
+| | localStorage | Cookie HttpOnly |
+|---|---|---|
+| Quién la guarda | El frontend, con JavaScript | El backend, con la cabecera `Set-Cookie` |
+| Se puede leer desde JavaScript | Sí | No |
+| Riesgo principal | **XSS**: si alguien consigue ejecutar un script en la página, puede leer el token y usarlo desde otro sitio | **CSRF**: el navegador envía la cookie solo, también en peticiones que provoca otra web; hay que protegerse (`SameSite`, token anti-CSRF) |
+| Qué pide | Nada especial: encaja con una API que devuelve el token en el JSON | Cambiar el backend (enviar y leer cookies) y configurar CORS con `credentials` |
+
+Elegimos localStorage porque es lo que encaja con el contrato de la API (el token llega en el JSON del
+login) y se entiende sin piezas extra. El riesgo de XSS se reduce porque Angular escapa todo lo que se
+pinta en las plantillas (`{{ }}` nunca ejecuta HTML), y porque el access token dura poco. En una
+aplicación real con datos sensibles, la cookie HttpOnly es la opción más segura.
+
+Los guards y el ocultar botones son solo comodidad: quien protege los datos es el backend, que
+comprueba el token y el rol en cada petición. Desde las herramientas del navegador se puede saltar un
+guard, pero la API seguiría respondiendo 401 o 403.
 
 ## Cosas de la API que hay que saber
 
-- Editar es un PUT y la API pide siempre los campos obligatorios. En los autores eso incluye la
-  contraseña: al editar hay que escribirla otra vez y se guarda la que se escriba.
+- Editar es un PUT y la API pide siempre los campos obligatorios (en los autores, el nombre y el
+  email). Un autor no tiene contraseña ni rol: quien inicia sesión es un usuario.
 - Un campo opcional que se deja vacío al editar no se borra. La API rechaza los valores vacíos, así
   que el formulario no los envía y la API deja el valor que tenía. Los tags sí se pueden vaciar: si se
   desmarcan todos se envía una lista vacía.

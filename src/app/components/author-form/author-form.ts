@@ -3,22 +3,10 @@ import { Component, OnInit, inject, input, signal } from '@angular/core';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
-import { Author, AuthorRole, CreateAuthor } from '../../models';
+import { Author, CreateAuthor } from '../../models';
 import { AuthorService } from '../../services/author.service';
 import { apiErrorMessage } from '../../utils/api-error';
 import { removeEmpty } from '../../utils/remove-empty';
-import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
-
-const passwordMatchValidator: ValidatorFn = (
-  control: AbstractControl
-): ValidationErrors | null => {
-  const password = control.get('password')?.value;
-  const confirmPassword = control.get('confirmPassword')?.value;
-
-  return password === confirmPassword
-    ? null
-    : { passwordMismatch: true };
-};
 
 @Component({
   selector: 'app-author-form',
@@ -39,19 +27,15 @@ export class AuthorForm implements OnInit {
   saving = signal(false);
   error = signal('');
 
-  // Reglas parecidas a las que valida el backend, así casi todos los errores se ven antes de enviar
+  // Reglas parecidas a las que valida el backend, así casi todos los errores se ven antes de enviar.
+  // Un autor no tiene contraseña ni rol: quien inicia sesión es un usuario (ver AuthService)
   form = this.fb.group({
     name: ['', [Validators.required, Validators.pattern(/\S/)]],
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8)]],
-    confirmPassword: ['', Validators.required],
     birthDate: [''],
     nationality: [''],
     website: ['', Validators.pattern(/^https?:\/\/\S+$/)],
     active: [true],
-    role: ['author' as AuthorRole],
-    }, {
-  validators: passwordMatchValidator
   });
 
   ngOnInit(): void {
@@ -89,8 +73,15 @@ export class AuthorForm implements OnInit {
     }
 
     const id = this.id();
-    const { confirmPassword, ...formData } = this.form.getRawValue();
-    const author = removeEmpty(formData) as CreateAuthor;
+    const formValue = this.form.getRawValue();
+    const author = removeEmpty({
+      name: formValue.name,
+      email: formValue.email,
+      birthDate: formValue.birthDate,
+      nationality: formValue.nationality,
+      website: formValue.website,
+      active: formValue.active,
+    }) as CreateAuthor;
     const request = id
       ? this.authorService.updateAuthor(id, author)
       : this.authorService.createAuthor(author);
@@ -108,7 +99,6 @@ export class AuthorForm implements OnInit {
   }
 
   private fillForm(author: Author): void {
-    // La API nunca devuelve la contraseña, así que ese campo se queda vacío
     this.form.patchValue({
       name: author.name,
       email: author.email,
@@ -116,7 +106,6 @@ export class AuthorForm implements OnInit {
       nationality: author.nationality ?? '',
       website: author.website ?? '',
       active: author.active ?? true,
-      role: author.role ?? 'author',
     });
   }
 }

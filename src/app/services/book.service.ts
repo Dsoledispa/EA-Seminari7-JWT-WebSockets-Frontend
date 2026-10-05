@@ -1,13 +1,9 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { Book, CreateBook, UpdateBook } from '../models';
-
-export interface BookListResponse {
-  books: Book[];
-}
+import { Book, BooksPage, CreateBook, UpdateBook } from '../models';
 
 export interface BookResponse {
   book: Book;
@@ -19,8 +15,10 @@ export class BookService {
   private baseUrl = `${environment.apiUrl}/books`;
 
   /** GET /books */
-  getBooks(): Observable<BookListResponse> {
-    return this.http.get<BookListResponse>(this.baseUrl);
+  getBooks(page = 1, limit = 5, search = ''): Observable<BooksPage> {
+    const params = new HttpParams().set('page', page).set('limit', limit);
+    const searchParams = search.trim() ? params.set('search', search.trim()) : params;
+    return this.http.get<BooksPage>(this.baseUrl, { params: searchParams });
   }
 
   /** GET /books/:id */

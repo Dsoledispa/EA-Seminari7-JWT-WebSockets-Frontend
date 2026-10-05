@@ -4,27 +4,26 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
-import { AuthorsList } from './authors-list';
+import { BooksList } from './books-list';
 
-describe('AuthorsList', () => {
-  let component: AuthorsList;
-  let fixture: ComponentFixture<AuthorsList>;
+describe('BooksList', () => {
+  let component: BooksList;
+  let fixture: ComponentFixture<BooksList>;
   let httpMock: HttpTestingController;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [AuthorsList],
-      // El componente usa AuthorService (necesita HttpClient) y el router
+      imports: [BooksList],
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
-    fixture = TestBed.createComponent(AuthorsList);
+    fixture = TestBed.createComponent(BooksList);
     component = fixture.componentInstance;
     fixture.detectChanges();
     httpMock
-      .expectOne(`${environment.apiUrl}/authors?page=1&limit=4`)
-      .flush({ authors: [], total: 5, page: 1, pages: 2 });
+      .expectOne(`${environment.apiUrl}/books?page=1&limit=4`)
+      .flush({ books: [], total: 5, page: 1, pages: 2 });
     await fixture.whenStable();
   });
 
@@ -38,8 +37,8 @@ describe('AuthorsList', () => {
     component.loadPage(2);
 
     httpMock
-      .expectOne(`${environment.apiUrl}/authors?page=2&limit=4`)
-      .flush({ authors: [], total: 5, page: 2, pages: 2 });
+      .expectOne(`${environment.apiUrl}/books?page=2&limit=4`)
+      .flush({ books: [], total: 5, page: 2, pages: 2 });
 
     expect(component.page()).toBe(2);
     expect(component.total()).toBe(5);
@@ -47,12 +46,12 @@ describe('AuthorsList', () => {
   });
 
   it('requests the first page again when searching', () => {
-    component.search.set('Ada');
+    component.search.set('Foundation');
     component.loadPage(1);
 
     httpMock
-      .expectOne(`${environment.apiUrl}/authors?page=1&limit=4&search=Ada`)
-      .flush({ authors: [], total: 0, page: 1, pages: 0 });
+      .expectOne(`${environment.apiUrl}/books?page=1&limit=4&search=Foundation`)
+      .flush({ books: [], total: 0, page: 1, pages: 0 });
 
     expect(component.page()).toBe(1);
     expect(component.total()).toBe(0);

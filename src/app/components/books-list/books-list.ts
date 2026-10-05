@@ -3,6 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
 
 import { Book } from '../../models';
 import { LanguageNamePipe } from '../../pipes/language-name-pipe';
@@ -13,7 +15,7 @@ import { Pagination } from '../pagination/pagination';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { ViewMode, ViewToggle, savedViewMode } from '../view-toggle/view-toggle';
 
-// Libros que se ven en cada página de la tabla
+// Se conserva el tamaño actual de página de la interfaz.
 const PAGE_SIZE = 4;
 
 @Component({
@@ -24,8 +26,11 @@ const PAGE_SIZE = 4;
 })
 export class BooksList implements OnInit {
   private bookService = inject(BookService);
+  private pageRequests = new Subject<{ page: number; search: string }>();
 
   books = signal<Book[]>([]);
+  total = signal(0);
+  totalPages = signal(1);
   loading = signal(true);
   error = signal('');
 
@@ -48,37 +53,40 @@ export class BooksList implements OnInit {
       ? `¿Borrar el libro "${book.title}"?`
       : '';
   });
-  // Me quedo con los libros cuyo título o ISBN contiene lo que se ha escrito
-  filteredBooks = computed(() => {
-    const text = this.search().trim().toLowerCase();
-    return this.books().filter(
-      (book) => 
-        book.title.toLowerCase().includes(text) || 
-        book.isbn.toLowerCase().includes(text) ||
-        (book.description && book.description.toLowerCase().includes(text))
-    );
-  });
+  pageBooks = computed(() => this.books());
 
-  totalPages = computed(() => Math.max(1, Math.ceil(this.filteredBooks().length / PAGE_SIZE)));
-
-  currentPage = computed(() => Math.min(this.page(), this.totalPages()));
-
-  pageBooks = computed(() => {
-    const start = (this.currentPage() - 1) * PAGE_SIZE;
-    return this.filteredBooks().slice(start, start + PAGE_SIZE);
-  });
+  constructor() {
+    this.pageRequests
+      .pipe(
+        switchMap(({ page, search }) => {
+          this.loading.set(true);
+          this.error.set('');
+          return this.bookService.getBooks(page, PAGE_SIZE, search).pipe(
+            tap((response) => {
+              this.books.set(response.books);
+              this.total.set(response.total);
+              this.totalPages.set(Math.max(response.pages, 1));
+              this.page.set(response.page);
+            }),
+            catchError((err: HttpErrorResponse) => {
+              this.error.set(apiErrorMessage(err));
+              return EMPTY;
+            }),
+            finalize(() => this.loading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe();
+  }
 
   ngOnInit(): void {
-    this.bookService.getBooks().subscribe({
-      next: (response) => {
-        this.books.set(response.books);
-        this.loading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(err));
-        this.loading.set(false);
-      },
-    });
+    this.loadPage(1);
+  }
+
+  loadPage(page: number): void {
+    this.page.set(page);
+    this.pageRequests.next({ page, search: this.search().trim() });
   }
 
   confirmDelete(): void {
@@ -89,11 +97,13 @@ export class BooksList implements OnInit {
 
     this.error.set('');
     this.bookService.deleteBook(book._id).subscribe({
-      // La API responde 204 sin datos, así que lo quito yo de la lista
       next: () => {
-      this.books.update((books) => books.filter((b) => b._id !== book._id));
-      this.bookToDelete.set(null);
-    },
+        this.total.update((total) => Math.max(0, total - 1));
+        const totalPages = Math.max(1, Math.ceil(this.total() / PAGE_SIZE));
+        this.totalPages.set(totalPages);
+        this.bookToDelete.set(null);
+        this.loadPage(Math.min(this.page(), totalPages));
+      },
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),
     });
   }

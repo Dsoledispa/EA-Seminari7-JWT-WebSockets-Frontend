@@ -3,6 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMPTY, Subject, catchError, finalize, switchMap, tap } from 'rxjs';
 
 import { Author } from '../../models';
 import { AuthorService } from '../../services/author.service';
@@ -12,7 +14,7 @@ import { Pagination } from '../pagination/pagination';
 import { ConfirmModal } from '../confirm-modal/confirm-modal';
 import { ViewMode, ViewToggle, savedViewMode } from '../view-toggle/view-toggle';
 
-// Autores que se ven en cada página de la tabla
+// Se conserva el tamaño actual de página de la interfaz.
 const PAGE_SIZE = 4;
 
 @Component({
@@ -24,9 +26,12 @@ const PAGE_SIZE = 4;
 export class AuthorsList implements OnInit {
   private authorService = inject(AuthorService);
   private router = inject(Router);
+  private pageRequests = new Subject<{ page: number; search: string }>();
 
   // Antes: authors: Author[] = [];
   authors = signal<Author[]>([]);
+  total = signal(0);
+  totalPages = signal(1);
   loading = signal(true);
   error = signal('');
 
@@ -47,36 +52,40 @@ export class AuthorsList implements OnInit {
       : '';
   });
 
-  // Me quedo con los autores cuyo nombre o email contiene lo que se ha escrito
-  filteredAuthors = computed(() => {
-    const text = this.search().trim().toLowerCase();
-    return this.authors().filter(
-      (author) =>
-        author.name.toLowerCase().includes(text) || author.email.toLowerCase().includes(text),
-    );
-  });
+  pageAuthors = computed(() => this.authors());
 
-  totalPages = computed(() => Math.max(1, Math.ceil(this.filteredAuthors().length / PAGE_SIZE)));
-
-  // Si borro el último autor de la última página, así no me quedo en una página vacía
-  currentPage = computed(() => Math.min(this.page(), this.totalPages()));
-
-  pageAuthors = computed(() => {
-    const start = (this.currentPage() - 1) * PAGE_SIZE;
-    return this.filteredAuthors().slice(start, start + PAGE_SIZE);
-  });
+  constructor() {
+    this.pageRequests
+      .pipe(
+        switchMap(({ page, search }) => {
+          this.loading.set(true);
+          this.error.set('');
+          return this.authorService.getAuthors(page, PAGE_SIZE, search).pipe(
+            tap((response) => {
+              this.authors.set(response.authors);
+              this.total.set(response.total);
+              this.totalPages.set(Math.max(response.pages, 1));
+              this.page.set(response.page);
+            }),
+            catchError((err: HttpErrorResponse) => {
+              this.error.set(apiErrorMessage(err));
+              return EMPTY;
+            }),
+            finalize(() => this.loading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe();
+  }
 
   ngOnInit(): void {
-    this.authorService.getAuthors().subscribe({
-      next: (response) => {
-        this.authors.set(response.authors);
-        this.loading.set(false);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.error.set(apiErrorMessage(err));
-        this.loading.set(false);
-      },
-    });
+    this.loadPage(1);
+  }
+
+  loadPage(page: number): void {
+    this.page.set(page);
+    this.pageRequests.next({ page, search: this.search().trim() });
   }
 
   edit(author: Author): void {
@@ -97,11 +106,14 @@ export class AuthorsList implements OnInit {
 
     this.error.set('');
     this.authorService.deleteAuthor(author._id).subscribe({
-      // La API responde 204 sin datos, así que lo quito yo de la lista
-       next: () => {
-      this.authors.update((authors) => authors.filter((a) => a._id !== author._id));
-      this.authorToDelete.set(null);
-    },
+      // Recarga la página para mantenerla completa y ajustar la última tras un borrado.
+      next: () => {
+        this.total.update((total) => Math.max(0, total - 1));
+        const totalPages = Math.max(1, Math.ceil(this.total() / PAGE_SIZE));
+        this.totalPages.set(totalPages);
+        this.authorToDelete.set(null);
+        this.loadPage(Math.min(this.page(), totalPages));
+      },
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),
     });
   }
