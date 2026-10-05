@@ -39,9 +39,20 @@ LOGS.md.
   opcional y busca parcialmente, sin distinguir mayúsculas: autores por nombre/email y libros por
   título/ISBN/descripción. Los metadatos de la respuesta se calculan sobre los resultados filtrados.
 - **Autores borrados**: un autor borrado (borrado lógico) sigue apareciendo dentro de sus libros.
-- **Chat** (extra): por concretar al empezar el bloque B del backend: los payloads de `chat:join` y
-  `chat:message`, la forma del mensaje que emite el servidor (usuario, texto, fecha), cómo llega el
-  historial al entrar y cómo se llama la sala de un chat directo.
+- **Chat** (extra):
+  - Conexión: `io(url, { auth: { token } })` con el access token. Si falta, es falso o ha caducado,
+    el servidor rechaza la conexión y el cliente recibe `connect_error` con el mensaje
+    `Authentication error`.
+  - Salas: `general`, `group:<nombre>` y `direct:<idA>:<idB>` (los dos ids ordenados; solo entran
+    esos dos usuarios). Cualquier otro nombre se rechaza con `chat:error`.
+  - Del cliente al servidor: `chat:join` con `{ room }` y `chat:message` con `{ room, text }` (de 1
+    a 2000 caracteres; hay que haber entrado antes en la sala).
+  - Del servidor al cliente: `chat:history` (solo a quien entra: los 50 últimos mensajes de la sala,
+    del más antiguo al más nuevo), `chat:message` (a toda la sala, también a quien lo escribió) y
+    `chat:error` con `{ message }`.
+  - Un mensaje es `{ _id, room, user: { _id, name }, text, timestamp }`.
+  - `GET /users` (con sesión, cualquier rol) responde `{ users: [{ _id, name }] }`, ordenados por
+    nombre, para elegir con quién hablar en el chat directo.
 
 ## Tareas
 
@@ -69,12 +80,12 @@ LOGS.md.
 Extra: el profesor lo marcó como no prioritario y seguramente no entra en la demo. Es la pareja del
 bloque B del backend. Se mantiene simple: lo importante es poder explicar el flujo de un mensaje.
 
-- [ ] Servicio que encapsula `socket.io-client` y se conecta enviando el token
-- [ ] Los eventos del socket expuestos como Observables
-- [ ] Componente de chat con los tres niveles: general, salas de grupo y directo (eligiendo el
+- [x] Servicio que encapsula `socket.io-client` y se conecta enviando el token
+- [x] Los eventos del socket expuestos como Observables
+- [x] Componente de chat con los tres niveles: general, salas de grupo y directo (eligiendo el
   usuario); historial al entrar, lista de mensajes, envío y estado de la conexión
-- [ ] Limpieza en `OnDestroy` (unsubscribe y desconexión) para no dejar conexiones duplicadas
-- [ ] URL del servidor de sockets en `environments`
+- [x] Limpieza en `OnDestroy` (unsubscribe y desconexión) para no dejar conexiones duplicadas
+- [x] URL del servidor de sockets en `environments`
 
 ### Bloque F: usar la paginación del servidor
 
@@ -188,3 +199,36 @@ bloque B del backend. Se mantiene simple: lo importante es poder explicar el flu
   el admin vuelve a la URL que pedía, crear un autor sin contraseña, la renovación automática (`401`,
   `refresh 200` y la misma petición `200`, sin pasar por el login) y que con el refresh token roto se
   cierra la sesión.
+
+### 2026-10-05 · Chat (Bloque E)
+
+- `ChatService` encapsula `socket.io-client`: un solo socket para toda la app, conectado con el token
+  en el handshake. Los eventos (`chat:history`, `chat:message`, `chat:error`, conexión y errores de
+  conexión) se exponen como Observables a partir de `Subject`; el estado de la conexión es un
+  `BehaviorSubject`. También pide `GET /users` para el chat directo.
+- Componente `Chat` en `/chat` (con `authGuard`, para cualquier rol) con pestañas General, Grupo (se
+  escribe el nombre del grupo) y Directo (se elige el usuario; la sala se forma con los dos ids
+  ordenados). Muestra el historial al entrar, los mensajes de la sala activa, el envío y si está
+  conectado. En `ngOnDestroy` cancela todas las suscripciones y cierra el socket.
+- `socketUrl` en `environment.ts`. Enlace "Chat" en la barra para cualquier usuario con sesión.
+- Revisión antes de presentar:
+  - **Fallo corregido**: el socket se conectaba con el token guardado, que no pasa por el
+    interceptor. Si había caducado (por ejemplo, tras 15 minutos sin hacer peticiones), el chat se
+    quedaba en "No se pudo conectar al chat: Authentication error". Ahora `auth` es una función que
+    lee siempre el token más reciente y, ante `Authentication error`, el servicio renueva el token
+    con `refresh()` y reconecta una vez; si no puede renovarlo, cierra la sesión.
+  - Se quita el método `listen()` de `ChatService`, que no se usaba.
+  - La página de inicio enlaza al chat (todos los roles tienen algo que hacer ahí).
+  - Tests nuevos: `ChatService` (`getUsers`, no conecta sin token, no emite sin conexión) y el
+    componente con un `ChatService` falso (entra en `general` al conectar, nombre del chat directo
+    con los ids ordenados, sin chat consigo mismo, solo los mensajes de la sala activa, errores del
+    servidor, desconexión al salir).
+  - Prettier en los ficheros del chat. README (stack, configuración, pantallas, estructura y un
+    apartado Chat), GUIA (apartado 14, "Chat con WebSockets") y el Contrato del chat concretado en
+    los dos LOGS.md.
+- Verificación: `npx ng lint` sin errores, `npx ng test` con 60 tests en verde (14 ficheros) y
+  `npx ng build` correcto. En el navegador (Playwright y Chromium), con el backend real y tokens de 20
+  segundos: chat con dos usuarios a la vez (mensajes en tiempo real en la sala general y en la
+  directa, historial al entrar), entrar en el chat con el token caducado conecta renovándolo, y con el
+  refresh token roto lleva al login; 11 comprobaciones correctas. La prueba completa de autenticación
+  del bloque D se repite sin fallos (27 comprobaciones).
