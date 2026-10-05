@@ -15,16 +15,25 @@ Lo que backend y frontend tienen que cumplir igual. Si algo de aquí cambia, se 
 LOGS.md.
 
 - **Rutas públicas**: `POST /auth/register` y `POST /auth/login`. `POST /auth/refresh` se autentica con
-  su propio refresh token. Todo lo demás exige token.
-- **Registro**: responde 201 con el usuario y **sin token**. El frontend redirige entonces a la página
-  de login.
-- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, user }` o 401.
+  su propio refresh token. `GET /ping` y la documentación (`/api-docs`) también son públicas. Todo lo
+  demás exige token.
+- **Registro**: el cuerpo es `{ name, email, password }` (contraseña de 8 caracteres como mínimo;
+  `role` no se acepta, todo usuario nuevo es `user`). Responde 201 con `{ user }` y **sin token**, 409
+  si el email ya existe o 422 si el cuerpo no es válido. El frontend redirige entonces a la página de
+  login.
+- **Login**: el cuerpo es `{ email, password }`. Responde `{ token, refreshToken, user }` o 401. `user`
+  es `{ _id, name, email, role, createdAt, updatedAt }`, sin contraseña.
+- **Refresh**: el cuerpo es `{ refreshToken }`. Responde `{ token }` (un access token nuevo) o 401 si el
+  refresh token ha caducado o no es válido. El refresh token no cambia.
 - **Token**: se envía en la cabecera `Authorization: Bearer <token>`. Su payload lleva los claims `sub`
-  (id del usuario), `role` y `exp`.
+  (id del usuario), `role` y `exp`. El access token dura 15 minutos y el refresh token 7 días.
+- **Errores de autenticación**: 401 si falta el token, ha caducado (`{ message: 'El token ha caducado' }`)
+  o no es válido (`{ message: 'Token no válido' }`); 403 si hay sesión pero no el rol necesario.
 - **Roles**: el CRUD del backoffice (autores y libros) es solo para `admin`. El chat es para todos los
   usuarios con sesión iniciada.
-- **Modelos**: `users`, `authors` y `books`. La autenticación vive solo en `User`: los campos
-  `password` y `role` que `Author` traía del Seminario 5 se eliminan.
+- **Modelos**: `users`, `authors` y `books`. La autenticación vive solo en `User` (`name`, `email`,
+  `password`, `role`): los campos `password` y `role` que `Author` traía del Seminario 5 se eliminan,
+  y enviarlos al crear o editar un autor da 422.
 - **Paginación y búsqueda**: `GET /authors?page=&limit=&search=` y
   `GET /books?page=&limit=&search=`, por defecto `page=1` y `limit=5` (máximo 100). `search` es
   opcional y busca parcialmente, sin distinguir mayúsculas: autores por nombre/email y libros por
