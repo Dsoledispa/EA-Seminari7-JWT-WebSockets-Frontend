@@ -238,6 +238,9 @@ el Contrato de [LOGS.md](LOGS.md).
 - **Grupo**: se escribe un nombre (por ejemplo `seminario-7`) y entra quien escriba el mismo.
 - **Directo**: se elige otro usuario de la lista. Solo pueden leerlo y escribir en él esos dos usuarios.
 
+Arriba, la franja **Usuarios** dice quién tiene el chat abierto ahora mismo (punto verde) y quién no
+(gris). Pulsar un usuario abre el chat directo con él.
+
 Al entrar en una sala llegan los últimos 50 mensajes. Para probarlo hacen falta dos sesiones a la vez,
 por ejemplo una ventana normal con `admin@example.com` y una de incógnito con `user@example.com`.
 

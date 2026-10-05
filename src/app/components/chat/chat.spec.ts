@@ -13,9 +13,11 @@ class FakeChatService {
   history$ = new Subject<ChatMessage[]>();
   messages$ = new Subject<ChatMessage>();
   chatError$ = new Subject<ChatError>();
+  onlineUsers$ = new BehaviorSubject<string[]>([]);
   users: ChatUser[] = [
     { _id: 'b-user', name: 'Usuario' },
     { _id: 'a-admin', name: 'Admin' },
+    { _id: 'c-ana', name: 'Ana' },
   ];
   connect = vi.fn();
   disconnect = vi.fn();
@@ -68,7 +70,7 @@ describe('Chat', () => {
   });
 
   it('does not offer a direct chat with oneself', () => {
-    expect(component.users().map((user) => user._id)).toEqual(['b-user']);
+    expect(component.users().map((user) => user._id)).toEqual(['b-user', 'c-ana']);
   });
 
   it('builds the same direct room name for both users (ids sorted)', () => {
@@ -98,5 +100,25 @@ describe('Chat', () => {
     fixture.destroy();
 
     expect(chat.disconnect).toHaveBeenCalled();
+  });
+
+  it('lists the connected users first and counts them, including oneself', () => {
+    chat.connectionStatus$.next(true);
+    chat.onlineUsers$.next(['a-admin', 'b-user']);
+
+    expect(component.people().map((p) => [p.name, p.online])).toEqual([
+      ['Usuario', true],
+      ['Ana', false],
+    ]);
+    expect(component.onlineCount()).toBe(2);
+  });
+
+  it('opens the direct chat when a user of the list is clicked', () => {
+    chat.connectionStatus$.next(true);
+    component.openDirect('c-ana');
+
+    expect(component.chatLevel()).toBe('direct');
+    expect(component.activeRoom()).toBe('direct:a-admin:c-ana');
+    expect(chat.joinRoom).toHaveBeenLastCalledWith('direct:a-admin:c-ana');
   });
 });
