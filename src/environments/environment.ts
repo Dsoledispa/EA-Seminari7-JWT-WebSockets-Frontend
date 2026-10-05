@@ -1,4 +1,8 @@
-// App settings. ONE single file: change apiUrl here and nothing else.
+// Direcciones de los servicios del backend
 export const environment = {
-  apiUrl: 'http://localhost:1337'
+  // URL usada por las llamadas HTTP.
+  apiUrl: 'http://localhost:1337',
+
+  // URL base usada para conectar con Socket.IO.
+  socketUrl: 'http://localhost:1337',
 };

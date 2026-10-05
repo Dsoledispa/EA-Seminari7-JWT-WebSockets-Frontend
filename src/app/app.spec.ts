@@ -32,19 +32,19 @@ describe('App', () => {
     expect(await navLinks()).toEqual(['Iniciar sesión', 'Registrarse']);
   });
 
-  it('an admin sees the backoffice links', async () => {
+  it('an admin sees the backoffice links and chat', async () => {
     localStorage.setItem(
       'user',
       JSON.stringify({ _id: 'u1', name: 'Admin', email: 'admin@example.com', role: 'admin' }),
     );
-    expect(await navLinks()).toEqual(['Autores', 'Libros']);
+    expect(await navLinks()).toEqual(['Autores', 'Libros', 'Chat']);
   });
 
-  it('a user does not see the backoffice links', async () => {
+  it('a user sees chat but not the backoffice links', async () => {
     localStorage.setItem(
       'user',
       JSON.stringify({ _id: 'u2', name: 'Usuario', email: 'user@example.com', role: 'user' }),
     );
-    expect(await navLinks()).toEqual([]);
+    expect(await navLinks()).toEqual(['Chat']);
   });
 });
