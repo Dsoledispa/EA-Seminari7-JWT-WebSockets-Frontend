@@ -54,6 +54,8 @@ LOGS.md.
   - Un mensaje es `{ _id, room, user: { _id, name }, text, timestamp }`.
   - `GET /users` (con sesión, cualquier rol) responde `{ users: [{ _id, name }] }`, ordenados por
     nombre, para elegir con quién hablar en el chat directo.
+- **Usuario con sesión**: `GET /users/me` (con sesión, cualquier rol) responde
+  `{ user: { _id, name, email, role } }`, a partir del token (`req.user`).
 
 ## Tareas
 
